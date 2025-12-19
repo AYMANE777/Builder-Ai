@@ -126,60 +126,60 @@ export const AnalysisSummary: React.FC<Props> = ({ result, onReset }) => {
             <CheckCircle2 className="w-5 h-5 text-emerald-500" />
             Matched Skills
           </h3>
-          <div className="flex flex-wrap gap-2">
-            {result.matchedSkills.map((skill, i) => (
-              <motion.span
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: i * 0.05 }}
-                key={skill}
-                className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full text-sm font-medium"
-              >
-                {skill}
-              </motion.span>
-            ))}
-          </div>
-        </motion.div>
+            <div className="flex flex-wrap gap-2">
+              {(result.matchedSkills || []).map((skill, i) => (
+                <motion.span
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.05 }}
+                  key={skill}
+                  className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full text-sm font-medium"
+                >
+                  {skill}
+                </motion.span>
+              ))}
+            </div>
+          </motion.div>
 
-        <motion.div variants={cardVariants} className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
-          <h3 className="flex items-center gap-2 text-white font-bold mb-4">
-            <XCircle className="w-5 h-5 text-rose-500" />
-            Missing Skills
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {result.missingSkills.map((skill, i) => (
-              <motion.span
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: i * 0.05 }}
-                key={skill}
-                className="px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-full text-sm font-medium"
-              >
-                {skill}
-              </motion.span>
-            ))}
-          </div>
-        </motion.div>
-      </div>
-
-      {/* AI Suggestions / Edits */}
-      <motion.div variants={cardVariants} className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-3">
-            <RefreshCw className="w-6 h-6 text-indigo-500" />
-            AI Recommended Edits
-          </h2>
-          <button 
-            onClick={onReset}
-            className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-2"
-          >
-            <RefreshCw className="w-4 h-4" /> Start New Analysis
-          </button>
+          <motion.div variants={cardVariants} className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
+            <h3 className="flex items-center gap-2 text-white font-bold mb-4">
+              <XCircle className="w-5 h-5 text-rose-500" />
+              Missing Skills
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {(result.missingSkills || []).map((skill, i) => (
+                <motion.span
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.05 }}
+                  key={skill}
+                  className="px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-full text-sm font-medium"
+                >
+                  {skill}
+                </motion.span>
+              ))}
+            </div>
+          </motion.div>
         </div>
-        
-        <div className="space-y-4">
-          <AnimatePresence>
-            {result.suggestions.map((suggestion, index) => (
+
+        {/* AI Suggestions / Edits */}
+        <motion.div variants={cardVariants} className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-3">
+              <RefreshCw className="w-6 h-6 text-indigo-500" />
+              AI Recommended Edits
+            </h2>
+            <button 
+              onClick={onReset}
+              className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" /> Start New Analysis
+            </button>
+          </div>
+          
+          <div className="space-y-4">
+            <AnimatePresence>
+              {(result.suggestions || []).map((suggestion, index) => (
               <SuggestionCard
                 key={index}
                 suggestion={suggestion}

@@ -11,7 +11,13 @@ interface Props {
 }
 
 export const ResumeReview: React.FC<Props> = ({ data, onAccept, onCancel }) => {
-  const [editedData, setEditedData] = useState<AnalyzeResponse>({ ...data });
+  const [editedData, setEditedData] = useState<AnalyzeResponse>({
+    ...data,
+    extractedSkills: data.extractedSkills || [],
+    matchedSkills: data.matchedSkills || [],
+    missingSkills: data.missingSkills || [],
+    suggestions: data.suggestions || []
+  });
   const [newSkill, setNewSkill] = useState('');
 
   const handleSkillRemove = (skill: string) => {

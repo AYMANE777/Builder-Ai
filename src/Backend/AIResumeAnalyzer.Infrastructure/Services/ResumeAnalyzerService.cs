@@ -112,7 +112,7 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
             suggestions);
     }
 
-    private double CalculateAtsScore(Resume resume, List<string> skills, int matchedCount, int totalJobSkills)
+    private double CalculateAtsScore(Resume resume, IEnumerable<string> skills, int matchedCount, int totalJobSkills)
     {
         double score = 0;
 
