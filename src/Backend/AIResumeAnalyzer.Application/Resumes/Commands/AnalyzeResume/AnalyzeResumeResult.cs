@@ -1,4 +1,5 @@
 using AIResumeAnalyzer.Domain.Enums;
+using AIResumeAnalyzer.Domain.ValueObjects;
 
 namespace AIResumeAnalyzer.Application.Resumes.Commands.AnalyzeResume;
 

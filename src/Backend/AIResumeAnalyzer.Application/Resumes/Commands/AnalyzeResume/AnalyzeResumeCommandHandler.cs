@@ -1,6 +1,7 @@
 using AIResumeAnalyzer.Application.Common.Interfaces.Persistence;
 using AIResumeAnalyzer.Application.Common.Interfaces.Services;
 using AIResumeAnalyzer.Domain.Entities;
+using AIResumeAnalyzer.Domain.ValueObjects;
 using MediatR;
 
 namespace AIResumeAnalyzer.Application.Resumes.Commands.AnalyzeResume;
