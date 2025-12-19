@@ -1,0 +1,51 @@
+version: '3.9'
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Your_strong_password123
+    ports:
+      - "1433:1433"
+    networks:
+      - ai-network
+
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/backend.Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=AIResumeAnalyzer;User Id=sa;Password=Your_strong_password123;TrustServerCertificate=True;
+      - Jwt__Key=local-dev-secret-key-change-me
+      - Jwt__Issuer=AIResumeAnalyzer
+      - Jwt__Audience=AIResumeAnalyzerClients
+    depends_on:
+      - sqlserver
+    ports:
+      - "5000:8080"
+    networks:
+      - ai-network
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/frontend.Dockerfile
+    environment:
+      - VITE_API_BASE_URL=http://backend:8080
+    depends_on:
+      - backend
+    ports:
+      - "3000:4173"
+    networks:
+      - ai-network
+
+networks:
+  ai-network:
+    driver: bridge
+
+
+
+
+

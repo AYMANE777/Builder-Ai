@@ -1,0 +1,44 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.dll
+*.exe
+*.pdb
+*.log
+.vs/
+.vscode/
+
+## Frontend
+node_modules/
+dist/
+build/
+*.log
+.DS_Store
+
+## Database
+*.db
+*.db-shm
+*.db-wal
+
+## Docker
+.env
+
+## IDE
+.idea/
+*.swp
+*.swo
+
+## ML Models
+Models/*.zip
+Models/*.onnx
+
+## OS
+Thumbs.db
+.DS_Store
+
+
+
+
