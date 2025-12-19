@@ -60,6 +60,25 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
             _ => CandidateLevel.Reject
         };
 
+        var suggestions = new List<Suggestion>();
+        if (missing.Any())
+        {
+            suggestions.Add(new Suggestion(
+                "Skills",
+                "Existing skills list",
+                $"Add the following skills: {string.Join(", ", missing)}",
+                "These skills are required or preferred in the job description but missing from your resume."));
+
+            foreach (var skill in missing.Take(2))
+            {
+                suggestions.Add(new Suggestion(
+                    "Experience",
+                    "[Placeholder for experience context]",
+                    $"Mention your experience with {skill} in a recent project.",
+                    $"Highlighting {skill} in your experience section will significantly improve your match score."));
+            }
+        }
+
         return new AnalysisResult(
             resume.Id,
             job.Id,
@@ -67,7 +86,8 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
             Math.Round(skillMatch, 2),
             level,
             matched,
-            missing);
+            missing,
+            suggestions);
     }
 }
 

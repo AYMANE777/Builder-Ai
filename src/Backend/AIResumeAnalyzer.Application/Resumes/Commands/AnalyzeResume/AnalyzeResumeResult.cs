@@ -7,7 +7,8 @@ public sealed record AnalyzeResumeResult(
     double SkillMatchPercentage,
     CandidateLevel PredictedLevel,
     IReadOnlyCollection<string> MatchedSkills,
-    IReadOnlyCollection<string> MissingSkills);
+    IReadOnlyCollection<string> MissingSkills,
+    IReadOnlyCollection<Suggestion> Suggestions);
 
 
 

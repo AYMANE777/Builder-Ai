@@ -1,9 +1,17 @@
+export interface Suggestion {
+  section: string;
+  originalText: string;
+  suggestedText: string;
+  reason: string;
+}
+
 export interface AnalyzeResponse {
   compatibilityScore: number;
   skillMatchPercentage: number;
   predictedLevel: string;
   matchedSkills: string[];
   missingSkills: string[];
+  suggestions: Suggestion[];
 }
 
 export async function analyzeResume(

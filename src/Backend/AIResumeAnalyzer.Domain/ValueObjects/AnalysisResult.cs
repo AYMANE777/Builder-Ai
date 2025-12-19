@@ -11,6 +11,7 @@ public class AnalysisResult
     public CandidateLevel PredictedLevel { get; }
     public IReadOnlyCollection<string> MatchedSkills { get; }
     public IReadOnlyCollection<string> MissingSkills { get; }
+    public IReadOnlyCollection<Suggestion> Suggestions { get; }
 
     public AnalysisResult(
         Guid resumeId,
@@ -19,7 +20,8 @@ public class AnalysisResult
         double skillMatchPercentage,
         CandidateLevel predictedLevel,
         IEnumerable<string> matchedSkills,
-        IEnumerable<string> missingSkills)
+        IEnumerable<string> missingSkills,
+        IEnumerable<Suggestion> suggestions)
     {
         ResumeId = resumeId;
         JobId = jobId;
@@ -28,6 +30,7 @@ public class AnalysisResult
         PredictedLevel = predictedLevel;
         MatchedSkills = matchedSkills.ToList().AsReadOnly();
         MissingSkills = missingSkills.ToList().AsReadOnly();
+        Suggestions = suggestions.ToList().AsReadOnly();
     }
 }
 

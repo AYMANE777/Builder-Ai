@@ -57,7 +57,8 @@ public sealed class AnalyzeResumeCommandHandler
             analysis.SkillMatchPercentage,
             analysis.PredictedLevel,
             analysis.MatchedSkills,
-            analysis.MissingSkills);
+            analysis.MissingSkills,
+            analysis.Suggestions);
     }
 }
 
