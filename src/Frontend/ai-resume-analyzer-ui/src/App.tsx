@@ -2,11 +2,27 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnalyzeResponse } from './lib/api';
 import { ResumeUpload } from './components/Upload/ResumeUpload';
+import { ResumeReview } from './components/Upload/ResumeReview';
 import { AnalysisSummary } from './components/Analysis/AnalysisSummary';
 import { Sparkles, LayoutDashboard, History, Settings } from 'lucide-react';
 
 const App: React.FC = () => {
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
+  const [reviewData, setReviewData] = useState<AnalyzeResponse | null>(null);
+
+  const handleAnalysisComplete = (data: AnalyzeResponse) => {
+    setReviewData(data);
+  };
+
+  const handleReviewAccept = (updatedData: AnalyzeResponse) => {
+    setResult(updatedData);
+    setReviewData(null);
+  };
+
+  const handleReset = () => {
+    setResult(null);
+    setReviewData(null);
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 font-sans selection:bg-indigo-500/30">
@@ -54,7 +70,7 @@ const App: React.FC = () => {
 
       <main className="relative mx-auto max-w-7xl px-6 py-12">
         <AnimatePresence mode="wait">
-          {!result ? (
+          {!result && !reviewData ? (
             <motion.div
               key="upload"
               initial={{ opacity: 0, y: 20 }}
@@ -74,7 +90,20 @@ const App: React.FC = () => {
                   Upload your resume and paste the job description. Our AI will help you bridge the gap and land the interview.
                 </p>
               </div>
-              <ResumeUpload onAnalysisComplete={setResult} />
+              <ResumeUpload onAnalysisComplete={handleAnalysisComplete} />
+            </motion.div>
+          ) : reviewData ? (
+            <motion.div
+              key="review"
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -50 }}
+            >
+              <ResumeReview 
+                data={reviewData} 
+                onAccept={handleReviewAccept} 
+                onCancel={handleReset} 
+              />
             </motion.div>
           ) : (
             <motion.div
@@ -84,8 +113,8 @@ const App: React.FC = () => {
               exit={{ opacity: 0, scale: 1.05 }}
             >
               <AnalysisSummary 
-                result={result} 
-                onReset={() => setResult(null)} 
+                result={result!} 
+                onReset={handleReset} 
               />
             </motion.div>
           )}

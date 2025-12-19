@@ -8,7 +8,12 @@ export interface Suggestion {
 export interface AnalyzeResponse {
   compatibilityScore: number;
   skillMatchPercentage: number;
+  atsScore: number;
   predictedLevel: string;
+  extractedName: string;
+  extractedEmail: string;
+  extractedPhone: string;
+  extractedSkills: string[];
   matchedSkills: string[];
   missingSkills: string[];
   suggestions: Suggestion[];

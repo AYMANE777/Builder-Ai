@@ -56,7 +56,12 @@ public sealed class AnalyzeResumeCommandHandler
         return new AnalyzeResumeResult(
             analysis.CompatibilityScore,
             analysis.SkillMatchPercentage,
+            analysis.AtsScore,
             analysis.PredictedLevel,
+            analysis.ExtractedName,
+            analysis.ExtractedEmail,
+            analysis.ExtractedPhone,
+            analysis.ExtractedSkills,
             analysis.MatchedSkills,
             analysis.MissingSkills,
             analysis.Suggestions);
