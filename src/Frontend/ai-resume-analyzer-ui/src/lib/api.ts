@@ -28,6 +28,15 @@ export interface Suggestion {
   reason: string;
 }
 
+export interface AnalyzeRequest {
+  resumeFile: File;
+  jobTitle: string;
+  jobDescriptionText: string;
+  candidateName: string;
+  email: string;
+  language: string;
+}
+
 export interface AnalyzeResponse {
   compatibilityScore: number;
   skillMatchPercentage: number;
@@ -49,6 +58,23 @@ export interface AnalyzeResponse {
   missingSkills: string[];
   suggestions: Suggestion[];
 }
+
+export const analyzeResume = async (token: string, data: AnalyzeRequest): Promise<AnalyzeResponse> => {
+  const formData = new FormData();
+  formData.append('ResumeFile', data.resumeFile);
+  formData.append('JobTitle', data.jobTitle);
+  formData.append('JobDescriptionText', data.jobDescriptionText);
+  formData.append('CandidateName', data.candidateName);
+  formData.append('Email', data.email);
+  formData.append('Language', data.language || 'en');
+
+  const response = await axios.post(`${API_BASE_URL}/resume/analyze`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
 
 export const api = {
   analyze: async (formData: FormData): Promise<AnalyzeResponse> => {
@@ -80,3 +106,4 @@ export const api = {
     return response.data;
   }
 };
+
