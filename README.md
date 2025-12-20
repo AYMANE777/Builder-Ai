@@ -1,6 +1,6 @@
 ## AI-Powered Resume Analyzer
 
-AI-powered system that analyzes resumes and matches them to job descriptions using NLP and Machine Learning. Built as an industry-grade, portfolio-ready project using .NET 8, ML.NET, React 18, and modern DevOps practices.
+AI-powered system that analyzes resumes and matches them to job descriptions using natural language processing and machine learning. It was developed using .NET 8, ML.NET, React 18, and modern DevOps practices.
 
 ### Tech Stack
 - **Backend**: .NET 8, ASP.NET Core Web API (Minimal APIs + Controllers), Entity Framework Core, SQL Server, Clean Architecture, JWT Auth, Serilog, Swagger
