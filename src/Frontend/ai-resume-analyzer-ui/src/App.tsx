@@ -3,22 +3,36 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AnalyzeResponse, api } from './lib/api';
 import { ResumeUpload } from './components/Upload/ResumeUpload';
 import { ResumeReview } from './components/Upload/ResumeReview';
-import { AnalysisSummary } from './components/Analysis/AnalysisSummary';
+import { AnalysisDashboard } from './components/Analysis/AnalysisDashboard';
+import { TemplateSelector } from './components/Upload/TemplateSelector';
 import { Sparkles, LayoutDashboard, History, Settings, Loader2 } from 'lucide-react';
 
 const App: React.FC = () => {
+  const [step, setStep] = useState<'UPLOAD' | 'TEMPLATE' | 'NAME' | 'REVIEW' | 'DASHBOARD'>('UPLOAD');
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
   const [reviewData, setReviewData] = useState<AnalyzeResponse | null>(null);
   const [isReanalyzing, setIsReanalyzing] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('standard');
+  const [resumeName, setResumeName] = useState<string>('');
 
   const handleAnalysisComplete = (data: AnalyzeResponse) => {
     setReviewData(data);
+    setStep('TEMPLATE');
+  };
+
+  const handleTemplateSelect = (templateId: string) => {
+    setSelectedTemplate(templateId);
+    setStep('NAME');
+  };
+
+  const handleNameSubmit = (name: string) => {
+    setResumeName(name);
+    setStep('REVIEW');
   };
 
   const handleReviewAccept = async (updatedData: AnalyzeResponse) => {
     setIsReanalyzing(true);
     try {
-      // Re-run analysis with edited text and info
       const finalResult = await api.reAnalyze({
         resumeText: updatedData.resumeText,
         jobTitle: updatedData.extractedJobTitle || 'Candidate',
@@ -28,12 +42,11 @@ const App: React.FC = () => {
         language: 'en'
       });
       setResult(finalResult);
-      setReviewData(null);
+      setStep('DASHBOARD');
     } catch (error) {
       console.error('Re-analysis failed:', error);
-      // Fallback to updatedData if API fails
       setResult(updatedData);
-      setReviewData(null);
+      setStep('DASHBOARD');
     } finally {
       setIsReanalyzing(false);
     }
@@ -42,6 +55,7 @@ const App: React.FC = () => {
   const handleReset = () => {
     setResult(null);
     setReviewData(null);
+    setStep('UPLOAD');
   };
 
   return (
@@ -58,9 +72,44 @@ const App: React.FC = () => {
         </div>
       )}
 
+      {step === 'TEMPLATE' && (
+        <TemplateSelector 
+          onSelect={handleTemplateSelect} 
+          onCancel={() => setStep('UPLOAD')} 
+        />
+      )}
+
+      {step === 'NAME' && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl text-slate-900"
+          >
+            <h2 className="text-2xl font-bold mb-4">Name your resume</h2>
+            <p className="text-slate-500 mb-6 text-sm">Give your resume a name to easily find it later.</p>
+            <input
+              autoFocus
+              type="text"
+              placeholder="e.g. Software Engineer Resume"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 mb-6"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleNameSubmit((e.target as HTMLInputElement).value);
+              }}
+              onChange={(e) => setResumeName(e.target.value)}
+              value={resumeName}
+            />
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setStep('TEMPLATE')} className="px-5 py-2 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition-all">Back</button>
+              <button onClick={() => handleNameSubmit(resumeName)} className="px-8 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-500 transition-all">Next</button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       <header className="sticky top-0 z-50 border-b border-slate-800/50 bg-slate-950/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3 group cursor-pointer">
+          <div className="flex items-center gap-3 group cursor-pointer" onClick={handleReset}>
             <div className="relative">
               <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform">
                 <Sparkles className="w-6 h-6 text-white" />
@@ -96,7 +145,7 @@ const App: React.FC = () => {
 
       <main className="relative mx-auto max-w-7xl px-6 py-12">
         <AnimatePresence mode="wait">
-          {!result && !reviewData ? (
+          {step === 'UPLOAD' ? (
             <motion.div
               key="upload"
               initial={{ opacity: 0, y: 20 }}
@@ -118,7 +167,7 @@ const App: React.FC = () => {
               </div>
               <ResumeUpload onAnalysisComplete={handleAnalysisComplete} />
             </motion.div>
-          ) : reviewData ? (
+          ) : step === 'REVIEW' && reviewData ? (
             <motion.div
               key="review"
               initial={{ opacity: 0, x: 50 }}
@@ -131,7 +180,7 @@ const App: React.FC = () => {
                 onCancel={handleReset} 
               />
             </motion.div>
-          ) : (
+          ) : step === 'DASHBOARD' && result ? (
             <motion.div
               key="result"
               initial={{ opacity: 0, scale: 0.95 }}
@@ -143,9 +192,10 @@ const App: React.FC = () => {
                 onReset={handleReset} 
               />
             </motion.div>
-          )}
+          ) : null}
         </AnimatePresence>
       </main>
+
 
       <footer className="border-t border-slate-900 bg-slate-950/50 py-12">
         <div className="mx-auto max-w-7xl px-6 flex flex-col md:flex-row justify-between items-center gap-8">
