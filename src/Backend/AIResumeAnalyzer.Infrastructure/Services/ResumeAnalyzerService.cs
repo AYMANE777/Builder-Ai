@@ -3,6 +3,7 @@ using AIResumeAnalyzer.Domain.Entities;
 using AIResumeAnalyzer.Domain.Enums;
 using AIResumeAnalyzer.Domain.ValueObjects;
 using AIResumeAnalyzer.Infrastructure.Nlp;
+using System.Text.RegularExpressions;
 
 namespace AIResumeAnalyzer.Infrastructure.Services;
 
@@ -46,6 +47,9 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
             ? matched.Count / (double)jobSkills.Count * 100.0
             : 0.0;
 
+        // Perform Advanced Extraction
+        ExtractAllInformation(resume);
+
         // ATS Score Calculation
         double atsScore = CalculateAtsScore(resume, resumeSkills, matched.Count, jobSkills.Count);
 
@@ -63,38 +67,7 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
             _ => CandidateLevel.Reject
         };
 
-        // Extract contact info if missing
-        string extractedPhone = ExtractPhone(resume.RawText);
-        string extractedEmail = string.IsNullOrEmpty(resume.Email) ? ExtractEmail(resume.RawText) : resume.Email;
-        string extractedName = string.IsNullOrEmpty(resume.CandidateName) ? ExtractName(resume.RawText) : resume.CandidateName;
-
-        var suggestions = new List<Suggestion>();
-        if (missing.Any())
-        {
-            suggestions.Add(new Suggestion(
-                "Skills",
-                "Existing skills list",
-                $"Add the following skills: {string.Join(", ", missing)}",
-                "These skills are required or preferred in the job description but missing from your resume."));
-
-            foreach (var skill in missing.Take(2))
-            {
-                suggestions.Add(new Suggestion(
-                    "Experience",
-                    "[Placeholder for experience context]",
-                    $"Mention your experience with {skill} in a recent project.",
-                    $"Highlighting {skill} in your experience section will significantly improve your match score."));
-            }
-        }
-
-        if (atsScore < 70)
-        {
-            suggestions.Add(new Suggestion(
-                "ATS Optimization",
-                "Resume Structure",
-                "Improve resume formatting and contact information.",
-                "Your ATS score is low. Ensure you have clear headings, standard fonts, and all contact details (Phone, Email, LinkedIn)."));
-        }
+        var suggestions = GenerateSuggestions(missing, atsScore);
 
         return new AnalysisResult(
             resume.Id,
@@ -103,41 +76,150 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
             Math.Round(skillMatch, 2),
             Math.Round(atsScore, 2),
             level,
-            extractedName,
-            extractedEmail,
-            extractedPhone,
+            resume.CandidateName,
+            resume.Email,
+            resume.Phone,
+            resume.JobTitle,
+            resume.City,
+            resume.LinkedIn,
+            resume.Website,
+            resume.WorkExperiences,
+            resume.Education,
             resumeSkills,
             matched,
             missing,
             suggestions);
     }
 
+    private void ExtractAllInformation(Resume resume)
+    {
+        string text = resume.RawText;
+
+        // 1. Personal Info
+        if (string.IsNullOrEmpty(resume.CandidateName))
+            resume.CandidateName = ExtractName(text);
+
+        if (string.IsNullOrEmpty(resume.Email))
+            resume.Email = ExtractEmail(text);
+
+        if (string.IsNullOrEmpty(resume.Phone))
+            resume.Phone = ExtractPhone(text);
+
+        resume.LinkedIn = ExtractLinkedIn(text);
+        resume.Website = ExtractWebsite(text);
+        resume.City = ExtractCity(text);
+        resume.JobTitle = ExtractJobTitle(text);
+
+        // 2. Sections (Very basic heuristic)
+        ExtractExperiences(resume);
+        ExtractEducation(resume);
+    }
+
+    private string ExtractName(string text)
+    {
+        var lines = text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        return lines.Length > 0 ? lines[0].Trim() : "";
+    }
+
+    private string ExtractEmail(string text)
+    {
+        var match = Regex.Match(text, @"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}");
+        return match.Success ? match.Value : "";
+    }
+
+    private string ExtractPhone(string text)
+    {
+        var match = Regex.Match(text, @"\+?[\d\s-]{10,}");
+        return match.Success ? match.Value.Trim() : "";
+    }
+
+    private string ExtractLinkedIn(string text)
+    {
+        var match = Regex.Match(text, @"linkedin\.com\/in\/[a-zA-Z0-9-]+");
+        return match.Success ? "https://www." + match.Value : "";
+    }
+
+    private string ExtractWebsite(string text)
+    {
+        var match = Regex.Match(text, @"(https?:\/\/)?(www\.)?github\.com\/[a-zA-Z0-9-]+");
+        return match.Success ? match.Value : "";
+    }
+
+    private string ExtractCity(string text)
+    {
+        // Naive city extraction - look for "City, State" or just "City"
+        // This is hard without a database, but we can look for common patterns
+        var lines = text.Split('\n');
+        foreach (var line in lines.Take(10))
+        {
+            if (line.Contains("Location:", StringComparison.OrdinalIgnoreCase))
+                return line.Replace("Location:", "", StringComparison.OrdinalIgnoreCase).Trim();
+        }
+        return "";
+    }
+
+    private string ExtractJobTitle(string text)
+    {
+        var lines = text.Split('\n');
+        if (lines.Length > 1) return lines[1].Trim(); // Often the second line
+        return "";
+    }
+
+    private void ExtractExperiences(Resume resume)
+    {
+        // Look for "Experience" or "Work History" sections
+        var sections = Regex.Split(resume.RawText, @"(?i)(Experience|Work History|Employment)", RegexOptions.Multiline);
+        if (sections.Length > 2)
+        {
+            var expText = sections[2]; // Take the text after the header
+            var entries = Regex.Split(expText, @"\n(?=[A-Z][a-z]+ [A-Z][a-z]+|\d{4})"); // Naive split by capitalized words or years
+            foreach (var entry in entries.Take(3))
+            {
+                if (string.IsNullOrWhiteSpace(entry)) continue;
+                var lines = entry.Trim().Split('\n');
+                resume.AddWorkExperience(new WorkExperience
+                {
+                    Company = lines[0].Trim(),
+                    Role = lines.Length > 1 ? lines[1].Trim() : "Professional",
+                    Responsibilities = string.Join(" ", lines.Skip(2))
+                });
+            }
+        }
+    }
+
+    private void ExtractEducation(Resume resume)
+    {
+        var sections = Regex.Split(resume.RawText, @"(?i)(Education|Academic)", RegexOptions.Multiline);
+        if (sections.Length > 2)
+        {
+            var eduText = sections[2];
+            var lines = eduText.Trim().Split('\n');
+            if (lines.Length > 0)
+            {
+                resume.AddEducation(new Education
+                {
+                    School = lines[0].Trim(),
+                    Degree = lines.Length > 1 ? lines[1].Trim() : "Degree"
+                });
+            }
+        }
+    }
+
     private double CalculateAtsScore(Resume resume, IEnumerable<string> skills, int matchedCount, int totalJobSkills)
     {
         double score = 0;
+        if (totalJobSkills > 0) score += (matchedCount / (double)totalJobSkills) * 40.0;
+        else score += 20;
 
-        // 1. Skill Match (40%)
-        if (totalJobSkills > 0)
-        {
-            score += (matchedCount / (double)totalJobSkills) * 40.0;
-        }
-        else
-        {
-            score += 20; // Default if no job skills provided
-        }
+        if (!string.IsNullOrEmpty(resume.Email)) score += 5;
+        if (!string.IsNullOrEmpty(resume.CandidateName)) score += 5;
+        if (!string.IsNullOrEmpty(resume.Phone)) score += 5;
+        if (!string.IsNullOrEmpty(resume.LinkedIn)) score += 5;
 
-        // 2. Contact Info (20%)
-        if (!string.IsNullOrEmpty(resume.Email)) score += 7;
-        if (!string.IsNullOrEmpty(resume.CandidateName)) score += 7;
-        if (System.Text.RegularExpressions.Regex.IsMatch(resume.RawText, @"\+?[\d\s-]{10,}")) score += 6;
-
-        // 3. Content Length & Structure (20%)
         int wordCount = resume.RawText.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
         if (wordCount >= 300 && wordCount <= 1000) score += 20;
         else if (wordCount > 100 && wordCount < 1500) score += 10;
 
-        // 4. Formatting/Keywords (20%)
-        // Simple check for common headings
         string[] headings = { "Experience", "Education", "Skills", "Projects", "Summary" };
         int headingsFound = headings.Count(h => resume.RawText.Contains(h, StringComparison.OrdinalIgnoreCase));
         score += (headingsFound / (double)headings.Length) * 20.0;
@@ -145,23 +227,27 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
         return Math.Min(100, score);
     }
 
-    private string ExtractPhone(string text)
+    private List<Suggestion> GenerateSuggestions(List<string> missing, double atsScore)
     {
-        var match = System.Text.RegularExpressions.Regex.Match(text, @"\+?[\d\s-]{10,}");
-        return match.Success ? match.Value.Trim() : "";
-    }
+        var suggestions = new List<Suggestion>();
+        if (missing.Any())
+        {
+            suggestions.Add(new Suggestion(
+                "Skills",
+                "Existing skills list",
+                $"Add the following skills: {string.Join(", ", missing.Take(5))}",
+                "These skills are missing from your resume but highly relevant to the job."));
+        }
 
-    private string ExtractEmail(string text)
-    {
-        var match = System.Text.RegularExpressions.Regex.Match(text, @"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}");
-        return match.Success ? match.Value : "";
-    }
+        if (atsScore < 75)
+        {
+            suggestions.Add(new Suggestion(
+                "ATS Optimization",
+                "Resume Structure",
+                "Improve resume formatting and contact information.",
+                "Ensure your LinkedIn and Portfolio links are present and clickable. Use standard section headers."));
+        }
 
-    private string ExtractName(string text)
-    {
-        // Very naive name extraction - usually the first line
-        var lines = text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        return lines.Length > 0 ? lines[0].Trim() : "";
+        return suggestions;
     }
 }
-

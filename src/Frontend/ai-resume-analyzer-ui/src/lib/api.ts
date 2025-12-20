@@ -1,7 +1,30 @@
+import axios from 'axios';
+
+const API_BASE_URL = 'http://localhost:5001/api';
+
+export interface WorkExperience {
+  id: string;
+  company: string;
+  role: string;
+  location: string;
+  startDate: string;
+  endDate: string;
+  responsibilities: string;
+}
+
+export interface Education {
+  id: string;
+  school: string;
+  degree: string;
+  fieldOfStudy: string;
+  startDate: string;
+  endDate: string;
+}
+
 export interface Suggestion {
-  section: string;
-  originalText: string;
-  suggestedText: string;
+  category: string;
+  context: string;
+  suggestionText: string;
   reason: string;
 }
 
@@ -9,10 +32,16 @@ export interface AnalyzeResponse {
   compatibilityScore: number;
   skillMatchPercentage: number;
   atsScore: number;
-  predictedLevel: string;
+  predictedLevel: number;
   extractedName: string;
   extractedEmail: string;
   extractedPhone: string;
+  extractedJobTitle: string;
+  extractedCity: string;
+  extractedLinkedIn: string;
+  extractedWebsite: string;
+  workExperiences: WorkExperience[];
+  education: Education[];
   resumeText: string;
   jobDescriptionText: string;
   extractedSkills: string[];
@@ -21,46 +50,33 @@ export interface AnalyzeResponse {
   suggestions: Suggestion[];
 }
 
-export async function analyzeResume(
-  token: string,
-  payload: {
-    resumeFile?: File;
-    resumeText?: string;
-    jobTitle: string;
+export const api = {
+  analyze: async (formData: FormData): Promise<AnalyzeResponse> => {
+    const response = await axios.post(`${API_BASE_URL}/resume/analyze`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  reAnalyze: async (data: {
+    resumeText: string;
     jobDescriptionText: string;
-    candidateName: string;
-    email: string;
-    language: string;
+    candidateName?: string;
+    email?: string;
+    jobTitle?: string;
+    language?: string;
+  }): Promise<AnalyzeResponse> => {
+    const formData = new FormData();
+    formData.append('ResumeText', data.resumeText);
+    formData.append('JobDescriptionText', data.jobDescriptionText);
+    if (data.candidateName) formData.append('CandidateName', data.candidateName);
+    if (data.email) formData.append('Email', data.email);
+    if (data.jobTitle) formData.append('JobTitle', data.jobTitle);
+    if (data.language) formData.append('Language', data.language || 'en');
+
+    const response = await axios.post(`${API_BASE_URL}/resume/analyze`, formData);
+    return response.data;
   }
-): Promise<AnalyzeResponse> {
-  const formData = new FormData();
-  if (payload.resumeFile) {
-    formData.append('ResumeFile', payload.resumeFile);
-  }
-  if (payload.resumeText) {
-    formData.append('ResumeText', payload.resumeText);
-  }
-  formData.append('JobTitle', payload.jobTitle);
-  formData.append('JobDescriptionText', payload.jobDescriptionText);
-  formData.append('CandidateName', payload.candidateName);
-  formData.append('Email', payload.email);
-  formData.append('Language', payload.language);
-
-  const res = await fetch('/api/resume/analyze', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`
-    },
-    body: formData
-  });
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    console.error('API Error:', res.status, res.statusText, errorText);
-    throw new Error(`Failed to analyze resume: ${res.status} ${res.statusText} - ${errorText}`);
-  }
-
-  return res.json();
-}
-
-
+};

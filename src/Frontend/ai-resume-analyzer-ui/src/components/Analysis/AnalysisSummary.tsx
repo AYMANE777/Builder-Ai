@@ -56,68 +56,83 @@ export const AnalysisSummary: React.FC<Props> = ({ result, onReset }) => {
     visible: { opacity: 1, y: 0 }
   };
 
-  return (
-    <motion.div 
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="space-y-8"
-    >
-      {/* Header Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <StatCard 
-          icon={<TrendingUp className="w-5 h-5 text-indigo-400" />}
-          label="Compatibility"
-          value={result.compatibilityScore}
-          suffix="%"
-          color="indigo"
-        />
-        <StatCard 
-          icon={<ShieldCheck className="w-5 h-5 text-violet-400" />}
-          label="ATS Score"
-          value={result.atsScore}
-          suffix="/100"
-          color="violet"
-        />
-        <StatCard 
-          icon={<Cpu className="w-5 h-5 text-emerald-400" />}
-          label="Skill Match"
-          value={result.skillMatchPercentage}
-          suffix="%"
-          color="emerald"
-        />
-        <StatCard 
-          icon={<Award className="w-5 h-5 text-amber-400" />}
-          label="Level"
-          value={result.predictedLevel}
-          isText
-          color="amber"
-        />
-      </div>
+    const levelLabels = ['Reject', 'Junior', 'Mid', 'Senior'];
+    const levelValue = typeof result.predictedLevel === 'number' ? levelLabels[result.predictedLevel] : result.predictedLevel;
 
-      {/* Candidate Profile Info */}
-      <motion.div variants={cardVariants} className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-indigo-500/10 rounded-lg">
-            <User className="w-5 h-5 text-indigo-400" />
-          </div>
-          <h3 className="text-white font-bold">Candidate Information</h3>
+    return (
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="space-y-8"
+      >
+        {/* Header Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <StatCard 
+            icon={<TrendingUp className="w-5 h-5 text-indigo-400" />}
+            label="Compatibility"
+            value={result.compatibilityScore}
+            suffix="%"
+            color="indigo"
+          />
+          <StatCard 
+            icon={<ShieldCheck className="w-5 h-5 text-violet-400" />}
+            label="ATS Score"
+            value={result.atsScore}
+            suffix="/100"
+            color="violet"
+          />
+          <StatCard 
+            icon={<Cpu className="w-5 h-5 text-emerald-400" />}
+            label="Skill Match"
+            value={result.skillMatchPercentage}
+            suffix="%"
+            color="emerald"
+          />
+          <StatCard 
+            icon={<Award className="w-5 h-5 text-amber-400" />}
+            label="Level"
+            value={levelValue}
+            isText
+            color="amber"
+          />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="space-y-1">
-            <p className="text-[10px] font-bold text-slate-500 uppercase">Full Name</p>
-            <p className="text-white font-medium">{result.extractedName || "Not detected"}</p>
+
+        {/* Candidate Profile Info */}
+        <motion.div variants={cardVariants} className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-indigo-500/10 rounded-lg">
+              <User className="w-5 h-5 text-indigo-400" />
+            </div>
+            <h3 className="text-white font-bold">Candidate Information</h3>
           </div>
-          <div className="space-y-1">
-            <p className="text-[10px] font-bold text-slate-500 uppercase">Email Address</p>
-            <p className="text-white font-medium">{result.extractedEmail || "Not detected"}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold text-slate-500 uppercase">Full Name</p>
+              <p className="text-white font-medium">{result.extractedName || "Not detected"}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold text-slate-500 uppercase">Current Job Title</p>
+              <p className="text-white font-medium">{result.extractedJobTitle || "Not detected"}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold text-slate-500 uppercase">Email Address</p>
+              <p className="text-white font-medium">{result.extractedEmail || "Not detected"}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold text-slate-500 uppercase">Phone Number</p>
+              <p className="text-white font-medium">{result.extractedPhone || "Not detected"}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold text-slate-500 uppercase">Location</p>
+              <p className="text-white font-medium">{result.extractedCity || "Not detected"}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold text-slate-500 uppercase">LinkedIn</p>
+              <p className="text-white font-medium truncate max-w-xs">{result.extractedLinkedIn || "Not detected"}</p>
+            </div>
           </div>
-          <div className="space-y-1">
-            <p className="text-[10px] font-bold text-slate-500 uppercase">Phone Number</p>
-            <p className="text-white font-medium">{result.extractedPhone || "Not detected"}</p>
-          </div>
-        </div>
-      </motion.div>
+        </motion.div>
 
       {/* Skills Comparison */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

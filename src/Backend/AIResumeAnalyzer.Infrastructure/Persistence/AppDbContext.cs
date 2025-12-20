@@ -18,9 +18,17 @@ public class AppDbContext : DbContext
         // This prevents EF Core from auto-discovering navigations
         var resumeBuilder = modelBuilder.Entity<Resume>();
         resumeBuilder.Ignore(r => r.Skills);
+        resumeBuilder.Ignore(r => r.WorkExperiences);
+        resumeBuilder.Ignore(r => r.Education);
         resumeBuilder.HasKey(r => r.Id);
         resumeBuilder.Property(r => r.CandidateName).HasMaxLength(200).IsRequired();
         resumeBuilder.Property(r => r.Email).HasMaxLength(320);
+        resumeBuilder.Property(r => r.Phone).HasMaxLength(50);
+        resumeBuilder.Property(r => r.JobTitle).HasMaxLength(200);
+        resumeBuilder.Property(r => r.City).HasMaxLength(100);
+        resumeBuilder.Property(r => r.LinkedIn).HasMaxLength(500);
+        resumeBuilder.Property(r => r.Website).HasMaxLength(500);
+        resumeBuilder.Property(r => r.ProfilePhotoUrl).HasMaxLength(1000);
         resumeBuilder.Property(r => r.RawText).IsRequired();
         resumeBuilder.UsePropertyAccessMode(PropertyAccessMode.Property);
 

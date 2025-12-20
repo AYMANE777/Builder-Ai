@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AnalyzeResponse, analyzeResume } from './lib/api';
+import { AnalyzeResponse, api } from './lib/api';
 import { ResumeUpload } from './components/Upload/ResumeUpload';
 import { ResumeReview } from './components/Upload/ResumeReview';
 import { AnalysisSummary } from './components/Analysis/AnalysisSummary';
@@ -19,9 +19,9 @@ const App: React.FC = () => {
     setIsReanalyzing(true);
     try {
       // Re-run analysis with edited text and info
-      const finalResult = await analyzeResume('', {
+      const finalResult = await api.reAnalyze({
         resumeText: updatedData.resumeText,
-        jobTitle: 'Candidate', // Defaulting since it's not in the edit form yet
+        jobTitle: updatedData.extractedJobTitle || 'Candidate',
         jobDescriptionText: updatedData.jobDescriptionText,
         candidateName: updatedData.extractedName,
         email: updatedData.extractedEmail,
