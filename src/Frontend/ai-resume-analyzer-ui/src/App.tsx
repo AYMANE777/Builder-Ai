@@ -1,22 +1,42 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AnalyzeResponse } from './lib/api';
+import { AnalyzeResponse, analyzeResume } from './lib/api';
 import { ResumeUpload } from './components/Upload/ResumeUpload';
 import { ResumeReview } from './components/Upload/ResumeReview';
 import { AnalysisSummary } from './components/Analysis/AnalysisSummary';
-import { Sparkles, LayoutDashboard, History, Settings } from 'lucide-react';
+import { Sparkles, LayoutDashboard, History, Settings, Loader2 } from 'lucide-react';
 
 const App: React.FC = () => {
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
   const [reviewData, setReviewData] = useState<AnalyzeResponse | null>(null);
+  const [isReanalyzing, setIsReanalyzing] = useState(false);
 
   const handleAnalysisComplete = (data: AnalyzeResponse) => {
     setReviewData(data);
   };
 
-  const handleReviewAccept = (updatedData: AnalyzeResponse) => {
-    setResult(updatedData);
-    setReviewData(null);
+  const handleReviewAccept = async (updatedData: AnalyzeResponse) => {
+    setIsReanalyzing(true);
+    try {
+      // Re-run analysis with edited text and info
+      const finalResult = await analyzeResume('', {
+        resumeText: updatedData.resumeText,
+        jobTitle: 'Candidate', // Defaulting since it's not in the edit form yet
+        jobDescriptionText: updatedData.jobDescriptionText,
+        candidateName: updatedData.extractedName,
+        email: updatedData.extractedEmail,
+        language: 'en'
+      });
+      setResult(finalResult);
+      setReviewData(null);
+    } catch (error) {
+      console.error('Re-analysis failed:', error);
+      // Fallback to updatedData if API fails
+      setResult(updatedData);
+      setReviewData(null);
+    } finally {
+      setIsReanalyzing(false);
+    }
   };
 
   const handleReset = () => {
@@ -26,11 +46,17 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 font-sans selection:bg-indigo-500/30">
-      {/* Background Decor */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[20%] -left-[10%] w-[40%] h-[40%] bg-indigo-500/10 blur-[120px] rounded-full" />
-        <div className="absolute -bottom-[20%] -right-[10%] w-[40%] h-[40%] bg-violet-500/10 blur-[120px] rounded-full" />
-      </div>
+      {isReanalyzing && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl flex flex-col items-center gap-4">
+            <Loader2 className="w-12 h-12 text-indigo-500 animate-spin" />
+            <div className="text-center">
+              <h3 className="text-xl font-bold text-white">Refining Analysis</h3>
+              <p className="text-slate-400">Processing your updates...</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <header className="sticky top-0 z-50 border-b border-slate-800/50 bg-slate-950/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">

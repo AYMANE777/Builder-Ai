@@ -13,6 +13,8 @@ export interface AnalyzeResponse {
   extractedName: string;
   extractedEmail: string;
   extractedPhone: string;
+  resumeText: string;
+  jobDescriptionText: string;
   extractedSkills: string[];
   matchedSkills: string[];
   missingSkills: string[];
@@ -22,7 +24,8 @@ export interface AnalyzeResponse {
 export async function analyzeResume(
   token: string,
   payload: {
-    resumeFile: File;
+    resumeFile?: File;
+    resumeText?: string;
     jobTitle: string;
     jobDescriptionText: string;
     candidateName: string;
@@ -31,7 +34,12 @@ export async function analyzeResume(
   }
 ): Promise<AnalyzeResponse> {
   const formData = new FormData();
-  formData.append('ResumeFile', payload.resumeFile);
+  if (payload.resumeFile) {
+    formData.append('ResumeFile', payload.resumeFile);
+  }
+  if (payload.resumeText) {
+    formData.append('ResumeText', payload.resumeText);
+  }
   formData.append('JobTitle', payload.jobTitle);
   formData.append('JobDescriptionText', payload.jobDescriptionText);
   formData.append('CandidateName', payload.candidateName);

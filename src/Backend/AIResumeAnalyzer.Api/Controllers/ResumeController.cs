@@ -22,14 +22,21 @@ public class ResumeController : ControllerBase
         [FromForm] AnalyzeResumeRequestDto request,
         CancellationToken cancellationToken)
     {
-        if (request.ResumeFile == null)
-        {
-            return BadRequest(new { error = "Resume file is required" });
-        }
-
         try
         {
-            var resumeText = await ResumeFileToTextAsync(request.ResumeFile, cancellationToken);
+            string resumeText;
+            if (request.ResumeFile != null)
+            {
+                resumeText = await ResumeFileToTextAsync(request.ResumeFile, cancellationToken);
+            }
+            else if (!string.IsNullOrEmpty(request.ResumeText))
+            {
+                resumeText = request.ResumeText;
+            }
+            else
+            {
+                return BadRequest(new { error = "Resume file or text is required" });
+            }
 
             var command = new AnalyzeResumeCommand(
                 request.CandidateName,
@@ -79,6 +86,7 @@ public class ResumeController : ControllerBase
 public sealed class AnalyzeResumeRequestDto
 {
     public IFormFile? ResumeFile { get; set; }
+    public string? ResumeText { get; set; }
     public string JobTitle { get; set; } = string.Empty;
     public string JobDescriptionText { get; set; } = string.Empty;
     public string CandidateName { get; set; } = string.Empty;

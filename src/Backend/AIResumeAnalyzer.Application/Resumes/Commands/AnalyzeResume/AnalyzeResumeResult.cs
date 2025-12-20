@@ -11,6 +11,8 @@ public sealed record AnalyzeResumeResult(
     string ExtractedName,
     string ExtractedEmail,
     string ExtractedPhone,
+    string ResumeText,
+    string JobDescriptionText,
     IReadOnlyCollection<string> ExtractedSkills,
     IReadOnlyCollection<string> MatchedSkills,
     IReadOnlyCollection<string> MissingSkills,

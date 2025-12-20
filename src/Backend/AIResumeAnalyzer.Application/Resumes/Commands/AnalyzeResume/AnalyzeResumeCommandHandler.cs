@@ -61,6 +61,8 @@ public sealed class AnalyzeResumeCommandHandler
             analysis.ExtractedName,
             analysis.ExtractedEmail,
             analysis.ExtractedPhone,
+            request.ResumeText,
+            request.JobDescriptionText,
             analysis.ExtractedSkills,
             analysis.MatchedSkills,
             analysis.MissingSkills,
