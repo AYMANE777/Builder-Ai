@@ -231,126 +231,173 @@ export const ResumeReview: React.FC<Props> = ({ data, onAccept, onCancel }) => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column - Main Sections */}
         <div className="lg:col-span-8 space-y-6">
-          <SectionHeader id="personal" title="Personal & Professional Profile" icon={User}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">Professional Summary</label>
-                <div className="relative">
-                  <AlignLeft className="absolute left-4 top-4 w-4 h-4 text-slate-600" />
-                  <textarea
-                    value={editedData.extractedSummary}
-                    onChange={e => setEditedData(prev => ({ ...prev, extractedSummary: e.target.value }))}
-                    className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl pl-12 pr-4 py-4 text-white focus:ring-2 focus:ring-indigo-500/50 transition-all outline-none min-h-[140px] resize-none leading-relaxed"
-                    placeholder="Briefly describe your professional background..."
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">Full Name</label>
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
-                  <input
-                    type="text"
-                    value={editedData.extractedName}
-                    onChange={e => setEditedData(prev => ({ ...prev, extractedName: e.target.value }))}
-                    className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl pl-12 pr-4 py-4 text-white focus:ring-2 focus:ring-indigo-500/50 transition-all outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">Current Job Title</label>
-                <div className="relative">
-                  <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
-                  <input
-                    type="text"
-                    value={editedData.extractedJobTitle}
-                    onChange={e => setEditedData(prev => ({ ...prev, extractedJobTitle: e.target.value }))}
-                    className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl pl-12 pr-4 py-4 text-white focus:ring-2 focus:ring-indigo-500/50 transition-all outline-none"
-                    placeholder="e.g. Senior Software Engineer"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">City / Location</label>
-                <div className="relative">
-                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
-                  <input
-                    type="text"
-                    value={editedData.extractedCity}
-                    onChange={e => setEditedData(prev => ({ ...prev, extractedCity: e.target.value }))}
-                    className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl pl-12 pr-4 py-4 text-white focus:ring-2 focus:ring-indigo-500/50 transition-all outline-none"
-                    placeholder="e.g. Paris, France"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">Email</label>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
-                  <input
-                    type="email"
-                    value={editedData.extractedEmail}
-                    onChange={e => setEditedData(prev => ({ ...prev, extractedEmail: e.target.value }))}
-                    className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl pl-12 pr-4 py-4 text-white focus:ring-2 focus:ring-indigo-500/50 transition-all outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-          </SectionHeader>
-
-          <SectionHeader id="experience" title="Work Experience" icon={Briefcase}>
-            <div className="space-y-6">
-              <button onClick={addWorkExperience} className="w-full p-4 bg-indigo-500/5 border border-dashed border-indigo-500/30 rounded-2xl text-indigo-400 hover:bg-indigo-500/10 transition-all flex items-center justify-center gap-2 group">
-                <Plus className="w-4 h-4 group-hover:scale-125 transition-transform" /> 
-                <span className="text-sm font-black uppercase tracking-wider">Add Professional Experience</span>
-              </button>
-              
-              <div className="space-y-6">
-                {editedData.workExperiences.map(exp => (
-                  <div key={exp.id} className="group relative p-8 bg-slate-950/40 border border-slate-800 rounded-3xl space-y-5 hover:border-slate-700 transition-all">
-                    <button 
-                      onClick={() => removeWorkExperience(exp.id)}
-                      className="absolute top-6 right-6 p-2 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">Company</label>
-                        <input
-                          value={exp.company}
-                          onChange={e => handleWorkExperienceChange(exp.id, 'company', e.target.value)}
-                          className="w-full bg-slate-900/50 border border-slate-800 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">Role / Position</label>
-                        <input
-                          value={exp.role}
-                          onChange={e => handleWorkExperienceChange(exp.id, 'role', e.target.value)}
-                          className="w-full bg-slate-900/50 border border-slate-800 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase">Responsibilities & Achievements</label>
-                      <textarea
-                        value={exp.responsibilities}
-                        onChange={e => handleWorkExperienceChange(exp.id, 'responsibilities', e.target.value)}
-                        className="w-full bg-slate-900/50 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-300 outline-none focus:border-indigo-500/50 min-h-[120px] resize-none leading-relaxed"
-                      />
-                    </div>
+            <SectionHeader id="personal" title="Personal Information" icon={User}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Name</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={editedData.extractedName}
+                      onChange={e => setEditedData(prev => ({ ...prev, extractedName: e.target.value }))}
+                      className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500/50 transition-all outline-none"
+                    />
                   </div>
-                ))}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Job Title</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={editedData.extractedJobTitle}
+                      onChange={e => setEditedData(prev => ({ ...prev, extractedJobTitle: e.target.value }))}
+                      className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500/50 transition-all outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Email</label>
+                  <div className="relative">
+                    <input
+                      type="email"
+                      value={editedData.extractedEmail}
+                      onChange={e => setEditedData(prev => ({ ...prev, extractedEmail: e.target.value }))}
+                      className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500/50 transition-all outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Phone</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={editedData.extractedPhone}
+                      onChange={e => setEditedData(prev => ({ ...prev, extractedPhone: e.target.value }))}
+                      className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500/50 transition-all outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider">City</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={editedData.extractedCity}
+                      onChange={e => setEditedData(prev => ({ ...prev, extractedCity: e.target.value }))}
+                      className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500/50 transition-all outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider">LinkedIn</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={editedData.extractedLinkedIn}
+                      onChange={e => setEditedData(prev => ({ ...prev, extractedLinkedIn: e.target.value }))}
+                      className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500/50 transition-all outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Website/Portfolio</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={editedData.extractedWebsite}
+                      onChange={e => setEditedData(prev => ({ ...prev, extractedWebsite: e.target.value }))}
+                      className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500/50 transition-all outline-none"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-          </SectionHeader>
+            </SectionHeader>
+
+            <SectionHeader id="experience" title="Work Experience" icon={Briefcase}>
+              <div className="space-y-6">
+                <button onClick={addWorkExperience} className="w-full p-4 bg-indigo-500/5 border border-dashed border-indigo-500/30 rounded-2xl text-indigo-400 hover:bg-indigo-500/10 transition-all flex items-center justify-center gap-2 group">
+                  <Plus className="w-4 h-4 group-hover:scale-125 transition-transform" /> 
+                  <span className="text-sm font-black uppercase tracking-wider">Add Work Experience</span>
+                </button>
+                
+                <div className="space-y-8">
+                  {editedData.workExperiences.map(exp => (
+                    <div key={exp.id} className="group relative p-8 bg-slate-950/40 border border-slate-800 rounded-3xl space-y-6 hover:border-slate-700 transition-all">
+                      <button 
+                        onClick={() => removeWorkExperience(exp.id)}
+                        className="absolute top-6 right-6 p-2 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-[11px] font-black text-slate-500 uppercase">Company</label>
+                          <input
+                            value={exp.company}
+                            onChange={e => handleWorkExperienceChange(exp.id, 'company', e.target.value)}
+                            className="w-full bg-slate-900/50 border border-slate-800 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[11px] font-black text-slate-500 uppercase">Role</label>
+                          <input
+                            value={exp.role}
+                            onChange={e => handleWorkExperienceChange(exp.id, 'role', e.target.value)}
+                            className="w-full bg-slate-900/50 border border-slate-800 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[11px] font-black text-slate-500 uppercase">Location</label>
+                          <input
+                            value={exp.location}
+                            onChange={e => handleWorkExperienceChange(exp.id, 'location', e.target.value)}
+                            className="w-full bg-slate-900/50 border border-slate-800 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-[11px] font-black text-slate-500 uppercase">Start Date</label>
+                            <input
+                              type="text"
+                              placeholder="MM/YYYY"
+                              value={exp.startDate}
+                              onChange={e => handleWorkExperienceChange(exp.id, 'startDate', e.target.value)}
+                              className="w-full bg-slate-900/50 border border-slate-800 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[11px] font-black text-slate-500 uppercase">End Date</label>
+                            <input
+                              type="text"
+                              placeholder="MM/YYYY or Present"
+                              value={exp.endDate}
+                              onChange={e => handleWorkExperienceChange(exp.id, 'endDate', e.target.value)}
+                              className="w-full bg-slate-900/50 border border-slate-800 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-black text-slate-500 uppercase">Responsibilities</label>
+                        <textarea
+                          value={exp.responsibilities}
+                          onChange={e => handleWorkExperienceChange(exp.id, 'responsibilities', e.target.value)}
+                          className="w-full bg-slate-900/50 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-300 outline-none focus:border-indigo-500/50 min-h-[120px] resize-none leading-relaxed"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </SectionHeader>
 
           <SectionHeader id="education" title="Education" icon={GraduationCap}>
             <div className="space-y-6">

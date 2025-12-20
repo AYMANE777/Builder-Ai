@@ -221,12 +221,12 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
     private string ExtractCity(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return "";
-        var lines = text.Split('\n');
+        var lines = text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
         
         // common labels for location
-        var labels = new[] { "Location:", "Adresse:", "Address:", "Domicile:", "Localisation:" };
+        var labels = new[] { "Location:", "Adresse:", "Address:", "Domicile:", "Localisation:", "Ville:", "City:" };
         
-        foreach (var line in lines.Take(20))
+        foreach (var line in lines.Take(25))
         {
             var trimmed = line.Trim();
             foreach (var label in labels)
@@ -237,14 +237,30 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
                 }
             }
 
-            // Look for "City, Country" or "City, State" or just "City" if it's a known format
-            // Pattern: Word, Word (e.g. Paris, France or New York, NY)
+            // Look for "City, Country" or "City, State"
             var match = Regex.Match(trimmed, @"^[A-Z][a-zàâçéèêëîïôûù]+(?:[\s-][A-Z][a-zàâçéèêëîïôûù]+)*,\s*[A-Z][a-zàâçéèêëîïôûù]+(?:[\s-][A-Z][a-zàâçéèêëîïôûù]+)*$");
             if (match.Success) return match.Value;
             
-            // Postal code patterns (FR: 5 digits, US: 5 digits)
-            var zipMatch = Regex.Match(trimmed, @"\b\d{5}\b");
-            if (zipMatch.Success && trimmed.Length < 50) return trimmed;
+            // Look for single word cities near contact info (TAZA case)
+            // If the line is short (1-3 words) and contains no email/digits/links, it might be the city
+            if (trimmed.Length > 2 && trimmed.Length < 25 && 
+                !trimmed.Contains("@") && !trimmed.Contains("http") && 
+                !Regex.IsMatch(trimmed, @"\d{5,}") && 
+                trimmed.Split(' ').Length <= 3)
+            {
+                // Only if it's near other contact info
+                if (line.Contains("|") || line.Contains("•") || line.Contains("–") || line.Contains("-"))
+                {
+                    // Split and find the part that looks like a city
+                    var parts = trimmed.Split(new[] { '|', '•', '–', '-', ',' }, StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var part in parts)
+                    {
+                        var p = part.Trim();
+                        if (p.Length > 2 && p.Length < 20 && !p.Any(char.IsDigit) && !p.Contains("@"))
+                            return p;
+                    }
+                }
+            }
         }
         return "";
     }
@@ -254,33 +270,40 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
         if (string.IsNullOrWhiteSpace(text)) return "";
         var lines = text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
         
-        // Common job title keywords
         var keywords = new[] { 
             "Developer", "Engineer", "Manager", "Analyst", "Lead", "Architect", "Consultant", "Designer", "Specialist", "Administrator",
             "Développeur", "Ingénieur", "Responsable", "Analyste", "Consultant", "Concepteur", "Spécialiste", "Administrateur", "Chef de projet",
-            "Fullstack", "Frontend", "Backend", "Software", "Logiciel", "Data Scientist", "Product Owner"
+            "Fullstack", "Frontend", "Backend", "Software", "Logiciel", "Data Scientist", "Product Owner", "Technicien", "Stagiaire", "Stage"
         };
 
-        // Skip the name line (usually line 0 or 1)
         var name = ExtractName(text);
         
-        foreach (var line in lines.Take(15))
+        for (int i = 0; i < Math.Min(lines.Length, 15); i++)
         {
-            var trimmed = line.Trim();
+            var trimmed = lines[i].Trim();
             if (string.Equals(trimmed, name, StringComparison.OrdinalIgnoreCase)) continue;
-            if (trimmed.Contains("@") || Regex.IsMatch(trimmed, @"\d{10,}")) continue; // Skip email/phone
+            if (trimmed.Contains("@") || Regex.IsMatch(trimmed, @"\d{10,}")) continue; 
             
             if (keywords.Any(k => trimmed.Contains(k, StringComparison.OrdinalIgnoreCase)))
             {
-                // Ensure it's not a section header
-                var headers = new[] { "EXPERIENCE", "EDUCATION", "SKILLS", "SUMMARY", "EXPÉRIENCE", "FORMATION", "COMPÉTENCES" };
+                var headers = new[] { "EXPERIENCE", "EDUCATION", "SKILLS", "SUMMARY", "EXPÉRIENCE", "FORMATION", "COMPÉTENCES", "STAGES", "PROJECTS" };
                 if (headers.Any(h => string.Equals(trimmed, h, StringComparison.OrdinalIgnoreCase))) continue;
                 
                 return trimmed;
             }
         }
         
-        // Fallback: if we found a "Summary" or "Objective" header, look at the line above it or the first non-empty line after name
+        // If not found by keywords, often the line right after the name is the title
+        for (int i = 0; i < Math.Min(lines.Length - 1, 5); i++)
+        {
+            if (string.Equals(lines[i].Trim(), name, StringComparison.OrdinalIgnoreCase))
+            {
+                var nextLine = lines[i+1].Trim();
+                if (nextLine.Length > 5 && !nextLine.Contains("@") && !nextLine.Any(char.IsDigit))
+                    return nextLine;
+            }
+        }
+
         return lines.Length > 1 ? lines[1].Trim() : "";
     }
 
@@ -350,7 +373,7 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
             if (string.IsNullOrWhiteSpace(trimmedLine)) continue;
 
             bool isNewEntry = Regex.IsMatch(trimmedLine, dateRangePattern, RegexOptions.IgnoreCase) || 
-                             (trimmedLine.Length < 100 && (trimmedLine.Contains("|") || trimmedLine.Contains(" - ") || trimmedLine.Contains(" @ ")));
+                             (trimmedLine.Length < 120 && (trimmedLine.Contains("|") || trimmedLine.Contains(" - ") || trimmedLine.Contains(" – ") || trimmedLine.Contains(" @ ")));
 
             if (isNewEntry && (currentExp == null || trimmedLine.Length > 5))
             {
@@ -362,8 +385,50 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
                 if (trimmedLine.Contains("|"))
                 {
                     var parts = trimmedLine.Split('|');
-                    currentExp.Company = parts[0].Trim();
-                    currentExp.Role = parts.Length > 1 ? parts[1].Trim() : "Role";
+                    var firstPart = parts[0].Trim();
+                    
+                    if (firstPart.Contains(" – "))
+                    {
+                        var subParts = firstPart.Split(" – ");
+                        currentExp.Role = subParts[0].Trim();
+                        currentExp.Company = subParts.Length > 1 ? subParts[1].Trim() : "Company";
+                    }
+                    else if (firstPart.Contains(" - "))
+                    {
+                        var subParts = firstPart.Split(" - ");
+                        currentExp.Role = subParts[0].Trim();
+                        currentExp.Company = subParts.Length > 1 ? subParts[1].Trim() : "Company";
+                    }
+                    else
+                    {
+                        currentExp.Company = firstPart;
+                    }
+                    
+                    // Look for Location or Date in remaining parts
+                    for(int p = 1; p < parts.Length; p++)
+                    {
+                        var part = parts[p].Trim();
+                        if (Regex.IsMatch(part, dateRangePattern, RegexOptions.IgnoreCase))
+                        {
+                            // Could store date if we had a field, for now it goes to responsibilities or we could add fields
+                        }
+                        else if (part.Length < 20 && !part.Any(char.IsDigit))
+                        {
+                            currentExp.Location = part;
+                        }
+                    }
+                }
+                else if (trimmedLine.Contains(" – "))
+                {
+                    var parts = trimmedLine.Split(" – ");
+                    currentExp.Role = parts[0].Trim();
+                    currentExp.Company = parts.Length > 1 ? parts[1].Trim() : "Company";
+                }
+                else if (trimmedLine.Contains(" - "))
+                {
+                    var parts = trimmedLine.Split(" - ");
+                    currentExp.Role = parts[0].Trim();
+                    currentExp.Company = parts.Length > 1 ? parts[1].Trim() : "Company";
                 }
                 else if (trimmedLine.Contains(" @ "))
                 {
@@ -373,7 +438,6 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
                 }
                 else if (Regex.IsMatch(trimmedLine, dateRangePattern, RegexOptions.IgnoreCase))
                 {
-                    // If it's just a date line, the next line might be the company/role
                     currentExp.Responsibilities = trimmedLine; 
                 }
                 else
