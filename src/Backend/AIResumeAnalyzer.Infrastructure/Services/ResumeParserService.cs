@@ -33,10 +33,13 @@ public class ResumeParserService : IResumeParserService
             {
                 sb.AppendLine(page.Text);
             }
-            return Task.FromResult(sb.ToString());
+            var text = sb.ToString();
+            Console.WriteLine($"[ResumeParserService] PDF Extracted Text Length: {text.Length}");
+            return Task.FromResult(text);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Console.WriteLine($"[ResumeParserService] PDF Error: {ex.Message}");
             return Task.FromResult(string.Empty);
         }
     }
@@ -49,28 +52,20 @@ public class ResumeParserService : IResumeParserService
             var body = wordDocument.MainDocumentPart?.Document.Body;
             if (body == null) return Task.FromResult(string.Empty);
 
-            var sb = new StringBuilder();
-            foreach (var text in body.Descendants<Text>())
-            {
-                sb.Append(text.Text);
-                if (text.Parent is Run run && run.Parent is Paragraph)
-                {
-                    // Basic heuristic to add spaces/newlines between paragraphs
-                }
-            }
-
-            // Better way for DOCX text
             var paragraphs = body.Elements<Paragraph>();
-            var sb2 = new StringBuilder();
+            var sb = new StringBuilder();
             foreach (var p in paragraphs)
             {
-                sb2.AppendLine(p.InnerText);
+                sb.AppendLine(p.InnerText);
             }
 
-            return Task.FromResult(sb2.ToString());
+            var text = sb.ToString();
+            Console.WriteLine($"[ResumeParserService] DOCX Extracted Text Length: {text.Length}");
+            return Task.FromResult(text);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Console.WriteLine($"[ResumeParserService] DOCX Error: {ex.Message}");
             return Task.FromResult(string.Empty);
         }
     }

@@ -1,3 +1,4 @@
+using AIResumeAnalyzer.Application.Common.Interfaces.Services;
 using AIResumeAnalyzer.Application.Resumes.Commands.AnalyzeResume;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -70,22 +71,6 @@ public class ResumeController : ControllerBase
     {
         await Task.CompletedTask;
         return Accepted(new { status = "Training started" });
-    }
-
-    private async Task<string> ResumeFileToTextAsync(IFormFile file, CancellationToken cancellationToken)
-    {
-        using var ms = new MemoryStream();
-        await file.CopyToAsync(ms, cancellationToken);
-        var bytes = ms.ToArray();
-        
-        // Simple text extraction - in production, use proper PDF/DOCX parsers
-        if (file.FileName.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
-        {
-            return System.Text.Encoding.UTF8.GetString(bytes);
-        }
-        
-        // For PDF/DOCX, return a placeholder or implement proper parsing
-        return $"Resume content from {file.FileName} - {bytes.Length} bytes";
     }
 }
 

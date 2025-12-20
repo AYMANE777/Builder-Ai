@@ -94,82 +94,117 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
     private void ExtractAllInformation(Resume resume)
     {
         string text = resume.RawText;
+        Console.WriteLine($"[ResumeAnalyzerService] Analyzing text of length: {text?.Length ?? 0}");
 
         // 1. Personal Info
         if (string.IsNullOrEmpty(resume.CandidateName))
+        {
             resume.CandidateName = ExtractName(text);
+            Console.WriteLine($"[ResumeAnalyzerService] Extracted Name: {resume.CandidateName}");
+        }
 
         if (string.IsNullOrEmpty(resume.Email))
+        {
             resume.Email = ExtractEmail(text);
+            Console.WriteLine($"[ResumeAnalyzerService] Extracted Email: {resume.Email}");
+        }
 
         if (string.IsNullOrEmpty(resume.Phone))
+        {
             resume.Phone = ExtractPhone(text);
+            Console.WriteLine($"[ResumeAnalyzerService] Extracted Phone: {resume.Phone}");
+        }
 
         resume.LinkedIn = ExtractLinkedIn(text);
         resume.Website = ExtractWebsite(text);
         resume.City = ExtractCity(text);
         resume.JobTitle = ExtractJobTitle(text);
 
-        // 2. Sections (Very basic heuristic)
+        // 2. Sections
         ExtractExperiences(resume);
         ExtractEducation(resume);
+
+        Console.WriteLine($"[ResumeAnalyzerService] Extracted Experiences Count: {resume.WorkExperiences.Count}");
+        Console.WriteLine($"[ResumeAnalyzerService] Extracted Education Count: {resume.Education.Count}");
     }
 
     private string ExtractName(string text)
     {
+        if (string.IsNullOrWhiteSpace(text)) return "";
         var lines = text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        // Skip some common headers if they appear at the top
+        foreach (var line in lines.Take(5))
+        {
+            var trimmed = line.Trim();
+            if (trimmed.Length > 2 && !trimmed.Contains("@") && !Regex.IsMatch(trimmed, @"\d{5,}"))
+                return trimmed;
+        }
         return lines.Length > 0 ? lines[0].Trim() : "";
     }
 
     private string ExtractEmail(string text)
     {
+        if (string.IsNullOrWhiteSpace(text)) return "";
         var match = Regex.Match(text, @"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}");
         return match.Success ? match.Value : "";
     }
 
     private string ExtractPhone(string text)
     {
-        var match = Regex.Match(text, @"\+?[\d\s-]{10,}");
+        if (string.IsNullOrWhiteSpace(text)) return "";
+        var match = Regex.Match(text, @"(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}");
         return match.Success ? match.Value.Trim() : "";
     }
 
     private string ExtractLinkedIn(string text)
     {
+        if (string.IsNullOrWhiteSpace(text)) return "";
         var match = Regex.Match(text, @"linkedin\.com\/in\/[a-zA-Z0-9-]+");
         return match.Success ? "https://www." + match.Value : "";
     }
 
     private string ExtractWebsite(string text)
     {
+        if (string.IsNullOrWhiteSpace(text)) return "";
         var match = Regex.Match(text, @"(https?:\/\/)?(www\.)?github\.com\/[a-zA-Z0-9-]+");
         return match.Success ? match.Value : "";
     }
 
     private string ExtractCity(string text)
     {
-        // Naive city extraction - look for "City, State" or just "City"
-        // This is hard without a database, but we can look for common patterns
+        if (string.IsNullOrWhiteSpace(text)) return "";
         var lines = text.Split('\n');
-        foreach (var line in lines.Take(10))
+        foreach (var line in lines.Take(15))
         {
             if (line.Contains("Location:", StringComparison.OrdinalIgnoreCase))
                 return line.Replace("Location:", "", StringComparison.OrdinalIgnoreCase).Trim();
+            
+            // Look for "City, State" or "City, Country" pattern
+            var match = Regex.Match(line, @"([A-Z][a-z]+(?: [A-Z][a-z]+)*),\s*[A-Z]{2,}");
+            if (match.Success) return match.Value;
         }
         return "";
     }
 
     private string ExtractJobTitle(string text)
     {
+        if (string.IsNullOrWhiteSpace(text)) return "";
         var lines = text.Split('\n');
-        if (lines.Length > 1) return lines[1].Trim(); // Often the second line
-        return "";
+        // Look for common job title keywords in first 10 lines
+        var keywords = new[] { "Developer", "Engineer", "Manager", "Analyst", "Lead", "Architect", "Consultant", "Designer" };
+        foreach (var line in lines.Take(10))
+        {
+            if (keywords.Any(k => line.Contains(k, StringComparison.OrdinalIgnoreCase)))
+                return line.Trim();
+        }
+        return lines.Length > 1 ? lines[1].Trim() : "";
     }
 
     private void ExtractExperiences(Resume resume)
     {
         var text = resume.RawText;
+        if (string.IsNullOrWhiteSpace(text)) return;
         
-        // Better section detection
         var sectionHeaders = new[] { "EXPERIENCE", "WORK EXPERIENCE", "EMPLOYMENT", "WORK HISTORY", "PROFESSIONAL EXPERIENCE" };
         int startIndex = -1;
         foreach (var header in sectionHeaders)
@@ -180,8 +215,7 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
 
         if (startIndex == -1) return;
 
-        // Find end of section (next common header)
-        var nextHeaders = new[] { "EDUCATION", "SKILLS", "PROJECTS", "CERTIFICATIONS", "LANGUAGES", "SUMMARY" };
+        var nextHeaders = new[] { "EDUCATION", "SKILLS", "PROJECTS", "CERTIFICATIONS", "LANGUAGES", "SUMMARY", "INTERESTS" };
         int endIndex = text.Length;
         foreach (var header in nextHeaders)
         {
@@ -191,25 +225,30 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
 
         var expText = text.Substring(startIndex, endIndex - startIndex);
         
-        // Split by date patterns or common entry starts
-        // Pattern: Matches things like "Jan 2020", "2018 - 2022", "Present"
-        var entries = Regex.Split(expText, @"(?m)^(?=.*(20\d{2}|19\d{2}|Present|Current))", RegexOptions.IgnoreCase);
+        // Improved splitting: look for years or month/year combinations
+        var entrySplitPattern = @"(?m)^(?=.*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December|\d{1,2}/\d{2,4})\s*[\-\–\—]\s*(?:Present|Current|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December|\d{1,2}/\d{2,4}))";
         
-        foreach (var entry in entries.Skip(1).Take(5)) // Skip header, take up to 5
+        var entries = Regex.Split(expText, entrySplitPattern, RegexOptions.IgnoreCase);
+        if (entries.Length <= 1)
         {
-            if (string.IsNullOrWhiteSpace(entry) || entry.Length < 20) continue;
+            // Fallback: split by year mentions if the complex pattern fails
+            entries = Regex.Split(expText, @"(?m)^(?=.*(20\d{2}|19\d{2}))", RegexOptions.IgnoreCase);
+        }
+        
+        foreach (var entry in entries.Skip(1).Take(10)) 
+        {
+            if (string.IsNullOrWhiteSpace(entry) || entry.Length < 10) continue;
             
             var lines = entry.Trim().Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
             if (lines.Length == 0) continue;
 
-            // Simple heuristic: First line often contains Role or Company
             var firstLine = lines[0].Trim();
             var secondLine = lines.Length > 1 ? lines[1].Trim() : "";
 
             resume.AddWorkExperience(new WorkExperience
             {
                 Company = firstLine.Contains("|") ? firstLine.Split('|')[0].Trim() : firstLine,
-                Role = firstLine.Contains("|") ? firstLine.Split('|')[1].Trim() : (secondLine.Length > 0 ? secondLine : "Professional"),
+                Role = firstLine.Contains("|") ? firstLine.Split('|')[1].Trim() : (secondLine.Length > 0 ? secondLine : "Experience"),
                 Responsibilities = string.Join(" ", lines.Skip(firstLine.Contains("|") ? 1 : 2)).Trim()
             });
         }
@@ -218,7 +257,9 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
     private void ExtractEducation(Resume resume)
     {
         var text = resume.RawText;
-        var sectionHeaders = new[] { "EDUCATION", "ACADEMIC", "QUALIFICATIONS" };
+        if (string.IsNullOrWhiteSpace(text)) return;
+
+        var sectionHeaders = new[] { "EDUCATION", "ACADEMIC", "QUALIFICATIONS", "STUDIES" };
         int startIndex = -1;
         foreach (var header in sectionHeaders)
         {
@@ -229,7 +270,7 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
         if (startIndex == -1) return;
 
         int endIndex = text.Length;
-        var nextHeaders = new[] { "EXPERIENCE", "SKILLS", "PROJECTS", "CERTIFICATIONS", "LANGUAGES" };
+        var nextHeaders = new[] { "EXPERIENCE", "SKILLS", "PROJECTS", "CERTIFICATIONS", "LANGUAGES", "WORK EXPERIENCE" };
         foreach (var header in nextHeaders)
         {
             int idx = text.IndexOf(header, startIndex + 10, StringComparison.OrdinalIgnoreCase);
@@ -239,13 +280,22 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
         var eduText = text.Substring(startIndex, endIndex - startIndex);
         var lines = eduText.Trim().Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).Skip(1).ToList();
 
-        if (lines.Count > 0)
+        // Try to find multiple education entries
+        for (int i = 0; i < lines.Count; i += 2)
         {
+            if (i >= lines.Count) break;
+            var school = lines[i].Trim();
+            if (school.Length < 3) continue;
+
+            var degree = (i + 1 < lines.Count) ? lines[i + 1].Trim() : "Degree/Certificate";
+            
             resume.AddEducation(new Education
             {
-                School = lines[0].Trim(),
-                Degree = lines.Count > 1 ? lines[1].Trim() : "Degree"
+                School = school,
+                Degree = degree
             });
+            
+            if (resume.Education.Count >= 3) break;
         }
     }
 
