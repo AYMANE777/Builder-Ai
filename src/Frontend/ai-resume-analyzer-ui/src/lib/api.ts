@@ -21,6 +21,36 @@ export interface Education {
   endDate: string;
 }
 
+export interface Volunteering {
+  id: string;
+  organization: string;
+  role: string;
+  startDate: string;
+  endDate: string;
+  description: string;
+}
+
+export interface LanguageInfo {
+  id: string;
+  language: string;
+  fluency: string;
+}
+
+export interface Certification {
+  id: string;
+  name: string;
+  issuer: string;
+  date: string;
+}
+
+export interface Project {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  link: string;
+}
+
 export interface Suggestion {
   category: string;
   context: string;
@@ -49,8 +79,13 @@ export interface AnalyzeResponse {
   extractedCity: string;
   extractedLinkedIn: string;
   extractedWebsite: string;
+  extractedSummary: string;
   workExperiences: WorkExperience[];
   education: Education[];
+  volunteering: Volunteering[];
+  languages: LanguageInfo[];
+  certifications: Certification[];
+  projects: Project[];
   resumeText: string;
   jobDescriptionText: string;
   extractedSkills: string[];
