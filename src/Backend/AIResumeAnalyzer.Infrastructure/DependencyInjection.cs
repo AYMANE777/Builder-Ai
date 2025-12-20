@@ -25,6 +25,7 @@ public static class DependencyInjection
         services.AddScoped<IResumeRepository, ResumeRepository>();
         services.AddScoped<IJobDescriptionRepository, JobDescriptionRepository>();
         services.AddScoped<IResumeAnalyzerService, ResumeAnalyzerService>();
+        services.AddScoped<IResumeParserService, ResumeParserService>();
         services.AddSingleton<INlpPreprocessor, NlpPreprocessor>();
         services.AddSingleton<ISkillDictionary, SkillDictionary>();
         services.AddSingleton<IMLModelService, MLModelService>();

@@ -10,8 +10,13 @@ namespace AIResumeAnalyzer.Api.Controllers;
 public class ResumeController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly IResumeParserService _parserService;
 
-    public ResumeController(IMediator mediator) => _mediator = mediator;
+    public ResumeController(IMediator mediator, IResumeParserService parserService)
+    {
+        _mediator = mediator;
+        _parserService = parserService;
+    }
 
     /// <summary>
     /// Analyze a resume against a job description.
@@ -27,7 +32,8 @@ public class ResumeController : ControllerBase
             string resumeText;
             if (request.ResumeFile != null)
             {
-                resumeText = await ResumeFileToTextAsync(request.ResumeFile, cancellationToken);
+                using var stream = request.ResumeFile.OpenReadStream();
+                resumeText = await _parserService.ParseAsync(stream, request.ResumeFile.FileName, cancellationToken);
             }
             else if (!string.IsNullOrEmpty(request.ResumeText))
             {
