@@ -102,22 +102,19 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
         Console.WriteLine($"[ResumeAnalyzerService] Analyzing text of length: {text?.Length ?? 0}");
 
         // 1. Personal Info
-        if (string.IsNullOrEmpty(resume.CandidateName))
+        if (string.IsNullOrEmpty(resume.CandidateName) || resume.CandidateName == "Unknown")
         {
             resume.CandidateName = ExtractName(text);
-            Console.WriteLine($"[ResumeAnalyzerService] Extracted Name: {resume.CandidateName}");
         }
 
         if (string.IsNullOrEmpty(resume.Email))
         {
             resume.Email = ExtractEmail(text);
-            Console.WriteLine($"[ResumeAnalyzerService] Extracted Email: {resume.Email}");
         }
 
         if (string.IsNullOrEmpty(resume.Phone))
         {
             resume.Phone = ExtractPhone(text);
-            Console.WriteLine($"[ResumeAnalyzerService] Extracted Phone: {resume.Phone}");
         }
 
         resume.LinkedIn = ExtractLinkedIn(text);
@@ -133,15 +130,33 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
         ExtractLanguages(resume);
         ExtractCertifications(resume);
         ExtractProjects(resume);
+        ExtractSkillsFromSection(resume);
 
-        Console.WriteLine($"[ResumeAnalyzerService] Extracted Experiences Count: {resume.WorkExperiences.Count}");
-        Console.WriteLine($"[ResumeAnalyzerService] Extracted Education Count: {resume.Education.Count}");
+        Console.WriteLine($"[ResumeAnalyzerService] Final Extracted - Name: {resume.CandidateName}, Experiences: {resume.WorkExperiences.Count}, Education: {resume.Education.Count}");
+    }
+
+    private void ExtractSkillsFromSection(Resume resume)
+    {
+        var headers = new[] { "SKILLS", "COMPÉTENCES", "COMPÉTENCES COMPLÉMENTAIRES", "TECHNOLOGIES", "TECH STACK", "INFORMATIONS COMPLÉMENTAIRES", "SKILLS & EXPERTISE" };
+        var sectionText = ExtractSection(resume.RawText, headers);
+        if (string.IsNullOrWhiteSpace(sectionText)) return;
+
+        var separators = new[] { ',', ';', '•', '|', '\n', '\r', '·' };
+        var skills = sectionText.Split(separators, StringSplitOptions.RemoveEmptyEntries);
+        foreach (var s in skills)
+        {
+            var trimmed = s.Trim();
+            if (trimmed.Length > 1 && trimmed.Length < 50 && !trimmed.Contains(":") && !trimmed.Contains("http"))
+            {
+                resume.AddSkill(new Skill(trimmed, "extracted"));
+            }
+        }
     }
 
     private string ExtractSummary(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return "";
-        var sectionHeaders = new[] { "SUMMARY", "PROFESSIONAL SUMMARY", "PROFILE", "ABOUT ME", "OBJECTIVE", "RÉSUMÉ", "SYNTHÈSE" };
+        var sectionHeaders = new[] { "SUMMARY", "PROFESSIONAL SUMMARY", "PROFILE", "ABOUT ME", "OBJECTIVE", "RÉSUMÉ", "SYNTHÈSE", "À PROPOS DE MOI", "PROFIL" };
         return ExtractSection(text, sectionHeaders);
     }
 
@@ -153,19 +168,34 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
             startIndex = text.IndexOf(header, StringComparison.OrdinalIgnoreCase);
             if (startIndex != -1)
             {
-                startIndex += header.Length;
-                break;
+                int lineStart = text.LastIndexOf('\n', startIndex);
+                if (lineStart == -1 || (startIndex - lineStart) < 10)
+                {
+                    startIndex += header.Length;
+                    break;
+                }
+                startIndex = -1;
             }
         }
 
         if (startIndex == -1) return "";
 
-        var nextHeaders = new[] { "EXPERIENCE", "EDUCATION", "SKILLS", "PROJECTS", "CERTIFICATIONS", "LANGUAGES", "VOLUNTEERING", "WORK EXPERIENCE", "FORMATION", "COMPÉTENCES", "PROJETS", "BÉNÉVOLAT" };
+        var nextHeaders = new[] { 
+            "EXPERIENCE", "EDUCATION", "SKILLS", "PROJECTS", "CERTIFICATIONS", "LANGUAGES", "VOLUNTEERING", "WORK EXPERIENCE", 
+            "FORMATION", "COMPÉTENCES", "PROJETS", "BÉNÉVOLAT", "LANGUES", "LOISIRS", "INTERESTS", "INFORMATIONS COMPLÉMENTAIRES", "STAGES" 
+        };
         int endIndex = text.Length;
         foreach (var header in nextHeaders)
         {
             int idx = text.IndexOf(header, startIndex + 5, StringComparison.OrdinalIgnoreCase);
-            if (idx != -1 && idx < endIndex) endIndex = idx;
+            if (idx != -1 && idx < endIndex)
+            {
+                int lineStart = text.LastIndexOf('\n', idx);
+                if (lineStart == -1 || (idx - lineStart) < 10)
+                {
+                    endIndex = idx;
+                }
+            }
         }
 
         return text.Substring(startIndex, endIndex - startIndex).Trim();
@@ -175,14 +205,13 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
     {
         if (string.IsNullOrWhiteSpace(text)) return "";
         var lines = text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        // Skip some common headers if they appear at the top
         foreach (var line in lines.Take(5))
         {
             var trimmed = line.Trim();
             if (trimmed.Length > 2 && !trimmed.Contains("@") && !Regex.IsMatch(trimmed, @"\d{5,}"))
                 return trimmed;
         }
-        return lines.Length > 0 ? lines[0].Trim() : "";
+        return lines.Length > 0 ? lines[0].Trim() : "Candidate Name";
     }
 
     private string ExtractEmail(string text)
@@ -198,7 +227,6 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
         var match = Regex.Match(text, @"(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}");
         if (!match.Success)
         {
-            // Try international/simpler format
             match = Regex.Match(text, @"(\+\d{1,3}[\s-]?)?(\d[\s-]?){8,12}");
         }
         return match.Success ? match.Value.Trim() : "";
@@ -222,8 +250,6 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
     {
         if (string.IsNullOrWhiteSpace(text)) return "";
         var lines = text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-        
-        // common labels for location
         var labels = new[] { "Location:", "Adresse:", "Address:", "Domicile:", "Localisation:", "Ville:", "City:" };
         
         foreach (var line in lines.Take(25))
@@ -232,26 +258,16 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
             foreach (var label in labels)
             {
                 if (trimmed.StartsWith(label, StringComparison.OrdinalIgnoreCase))
-                {
                     return trimmed.Substring(label.Length).Trim();
-                }
             }
 
-            // Look for "City, Country" or "City, State"
             var match = Regex.Match(trimmed, @"^[A-Z][a-zàâçéèêëîïôûù]+(?:[\s-][A-Z][a-zàâçéèêëîïôûù]+)*,\s*[A-Z][a-zàâçéèêëîïôûù]+(?:[\s-][A-Z][a-zàâçéèêëîïôûù]+)*$");
             if (match.Success) return match.Value;
             
-            // Look for single word cities near contact info (TAZA case)
-            // If the line is short (1-3 words) and contains no email/digits/links, it might be the city
-            if (trimmed.Length > 2 && trimmed.Length < 25 && 
-                !trimmed.Contains("@") && !trimmed.Contains("http") && 
-                !Regex.IsMatch(trimmed, @"\d{5,}") && 
-                trimmed.Split(' ').Length <= 3)
+            if (trimmed.Length > 2 && trimmed.Length < 25 && !trimmed.Contains("@") && !trimmed.Contains("http") && !Regex.IsMatch(trimmed, @"\d{5,}") && trimmed.Split(' ').Length <= 3)
             {
-                // Only if it's near other contact info
                 if (line.Contains("|") || line.Contains("•") || line.Contains("–") || line.Contains("-"))
                 {
-                    // Split and find the part that looks like a city
                     var parts = trimmed.Split(new[] { '|', '•', '–', '-', ',' }, StringSplitOptions.RemoveEmptyEntries);
                     foreach (var part in parts)
                     {
@@ -269,7 +285,6 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
     {
         if (string.IsNullOrWhiteSpace(text)) return "";
         var lines = text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-        
         var keywords = new[] { 
             "Developer", "Engineer", "Manager", "Analyst", "Lead", "Architect", "Consultant", "Designer", "Specialist", "Administrator",
             "Développeur", "Ingénieur", "Responsable", "Analyste", "Consultant", "Concepteur", "Spécialiste", "Administrateur", "Chef de projet",
@@ -277,249 +292,104 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
         };
 
         var name = ExtractName(text);
-        
         for (int i = 0; i < Math.Min(lines.Length, 15); i++)
         {
             var trimmed = lines[i].Trim();
             if (string.Equals(trimmed, name, StringComparison.OrdinalIgnoreCase)) continue;
             if (trimmed.Contains("@") || Regex.IsMatch(trimmed, @"\d{10,}")) continue; 
-            
             if (keywords.Any(k => trimmed.Contains(k, StringComparison.OrdinalIgnoreCase)))
             {
                 var headers = new[] { "EXPERIENCE", "EDUCATION", "SKILLS", "SUMMARY", "EXPÉRIENCE", "FORMATION", "COMPÉTENCES", "STAGES", "PROJECTS" };
                 if (headers.Any(h => string.Equals(trimmed, h, StringComparison.OrdinalIgnoreCase))) continue;
-                
                 return trimmed;
             }
         }
-        
-        // If not found by keywords, often the line right after the name is the title
-        for (int i = 0; i < Math.Min(lines.Length - 1, 5); i++)
-        {
-            if (string.Equals(lines[i].Trim(), name, StringComparison.OrdinalIgnoreCase))
-            {
-                var nextLine = lines[i+1].Trim();
-                if (nextLine.Length > 5 && !nextLine.Contains("@") && !nextLine.Any(char.IsDigit))
-                    return nextLine;
-            }
-        }
-
-        return lines.Length > 1 ? lines[1].Trim() : "";
+        return "";
     }
 
     private void ExtractExperiences(Resume resume)
     {
-        var text = resume.RawText;
-        if (string.IsNullOrWhiteSpace(text)) return;
-        
         var sectionHeaders = new[] { 
             "EXPERIENCE", "WORK EXPERIENCE", "EMPLOYMENT", "WORK HISTORY", "PROFESSIONAL EXPERIENCE", 
-            "EXPÉRIENCE PROFESSIONNELLE", "EXPÉRIENCES PROFESSIONNELLES", "EXPÉRIENCE", "EXPÉRIENCES" 
+            "EXPÉRIENCE PROFESSIONNELLE", "EXPÉRIENCES PROFESSIONNELLES", "EXPÉRIENCE", "EXPÉRIENCES",
+            "STAGES ET EXPÉRIENCES", "PARCOURS PROFESSIONNEL"
         };
-        
-        int startIndex = -1;
-        foreach (var header in sectionHeaders)
-        {
-            startIndex = text.IndexOf(header, StringComparison.OrdinalIgnoreCase);
-            if (startIndex != -1)
-            {
-                // Verify it's likely a header (shorter line)
-                int lineEnd = text.IndexOf('\n', startIndex);
-                if (lineEnd != -1 && (lineEnd - startIndex) < 40)
-                {
-                    startIndex = lineEnd;
-                    break;
-                }
-                startIndex = -1; // reset if it looks like body text
-            }
-        }
+        var expText = ExtractSection(resume.RawText, sectionHeaders);
+        if (string.IsNullOrWhiteSpace(expText)) return;
 
-        if (startIndex == -1) return;
-
-        var nextHeaders = new[] { "EDUCATION", "SKILLS", "PROJECTS", "CERTIFICATIONS", "LANGUAGES", "SUMMARY", "INTERESTS", "FORMATION", "COMPÉTENCES", "PROJETS", "BÉNÉVOLAT", "VOLUNTEERING" };
-        int endIndex = text.Length;
-        foreach (var header in nextHeaders)
-        {
-            int idx = text.IndexOf(header, startIndex + 5, StringComparison.OrdinalIgnoreCase);
-            if (idx != -1 && idx < endIndex)
-            {
-                 // Verify it's a header
-                 int lineStart = text.LastIndexOf('\n', idx);
-                 int lineEnd = text.IndexOf('\n', idx);
-                 if (lineEnd == -1) lineEnd = text.Length;
-                 if ((lineEnd - (lineStart == -1 ? 0 : lineStart)) < 40)
-                 {
-                    endIndex = idx;
-                 }
-            }
-        }
-
-        var expText = text.Substring(startIndex, endIndex - startIndex).Trim();
-        
-        // Improved splitting: look for years or month/year combinations or bullet points that look like new entries
+        var lines = expText.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
         var months = "Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December|Janvier|Février|Mars|Avril|Mai|Juin|Juillet|Août|Septembre|Octobre|Novembre|Décembre";
-        
-        // Match lines that contain a date range: e.g. "2020 - 2022" or "Jan 2020 to Present"
         var dateRangePattern = $@"(?:{months}|\d{{1,2}}/\d{{2,4}}|\b20\d{{2}}\b)\s*[\-\–\—\s]+(?:Present|Current|Présent|Aujourd'hui|{months}|\d{{1,2}}/\d{{2,4}}|\b20\d{{2}}\b)";
         
-        // Split by lines that look like a new job entry (often starts with date or company name)
-        var lines = expText.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-        
         WorkExperience currentExp = null;
-        
         foreach (var line in lines)
         {
             var trimmedLine = line.Trim();
-            if (string.IsNullOrWhiteSpace(trimmedLine)) continue;
+            if (string.IsNullOrWhiteSpace(trimmedLine) || trimmedLine.Length < 3) continue;
 
             bool isNewEntry = Regex.IsMatch(trimmedLine, dateRangePattern, RegexOptions.IgnoreCase) || 
-                             (trimmedLine.Length < 120 && (trimmedLine.Contains("|") || trimmedLine.Contains(" - ") || trimmedLine.Contains(" – ") || trimmedLine.Contains(" @ ")));
+                             (trimmedLine.Contains(" – ") || trimmedLine.Contains(" - ") || trimmedLine.Contains(" | ")) && trimmedLine.Length < 150;
 
-            if (isNewEntry && (currentExp == null || trimmedLine.Length > 5))
+            if (isNewEntry && (currentExp == null || !trimmedLine.StartsWith("•") && !trimmedLine.StartsWith("-")))
             {
                 if (currentExp != null) resume.AddWorkExperience(currentExp);
-                
                 currentExp = new WorkExperience();
-                
-                // Try to parse Company and Role from the line
-                if (trimmedLine.Contains("|"))
+                var parts = trimmedLine.Split(new[] { " | ", "|", " – ", " - ", " @ " }, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length >= 2)
                 {
-                    var parts = trimmedLine.Split('|');
-                    var firstPart = parts[0].Trim();
-                    
-                    if (firstPart.Contains(" – "))
-                    {
-                        var subParts = firstPart.Split(" – ");
-                        currentExp.Role = subParts[0].Trim();
-                        currentExp.Company = subParts.Length > 1 ? subParts[1].Trim() : "Company";
-                    }
-                    else if (firstPart.Contains(" - "))
-                    {
-                        var subParts = firstPart.Split(" - ");
-                        currentExp.Role = subParts[0].Trim();
-                        currentExp.Company = subParts.Length > 1 ? subParts[1].Trim() : "Company";
-                    }
-                    else
-                    {
-                        currentExp.Company = firstPart;
-                    }
-                    
-                    // Look for Location or Date in remaining parts
-                    for(int p = 1; p < parts.Length; p++)
-                    {
-                        var part = parts[p].Trim();
-                        if (Regex.IsMatch(part, dateRangePattern, RegexOptions.IgnoreCase))
-                        {
-                            // Could store date if we had a field, for now it goes to responsibilities or we could add fields
-                        }
-                        else if (part.Length < 20 && !part.Any(char.IsDigit))
-                        {
-                            currentExp.Location = part;
-                        }
-                    }
-                }
-                else if (trimmedLine.Contains(" – "))
-                {
-                    var parts = trimmedLine.Split(" – ");
                     currentExp.Role = parts[0].Trim();
-                    currentExp.Company = parts.Length > 1 ? parts[1].Trim() : "Company";
-                }
-                else if (trimmedLine.Contains(" - "))
-                {
-                    var parts = trimmedLine.Split(" - ");
-                    currentExp.Role = parts[0].Trim();
-                    currentExp.Company = parts.Length > 1 ? parts[1].Trim() : "Company";
-                }
-                else if (trimmedLine.Contains(" @ "))
-                {
-                    var parts = trimmedLine.Split(new[] { " @ " }, StringSplitOptions.None);
-                    currentExp.Role = parts[0].Trim();
-                    currentExp.Company = parts.Length > 1 ? parts[1].Trim() : "Company";
-                }
-                else if (Regex.IsMatch(trimmedLine, dateRangePattern, RegexOptions.IgnoreCase))
-                {
-                    currentExp.Responsibilities = trimmedLine; 
+                    currentExp.Company = parts[1].Trim();
+                    if (parts.Length >= 3) currentExp.Location = parts[2].Trim();
                 }
                 else
                 {
-                    currentExp.Company = trimmedLine;
-                    currentExp.Role = "Professional Experience";
+                    currentExp.Role = trimmedLine;
+                    currentExp.Company = "Company";
                 }
             }
             else if (currentExp != null)
             {
-                if (string.IsNullOrEmpty(currentExp.Role) || currentExp.Role == "Professional Experience")
-                {
-                    currentExp.Role = trimmedLine;
-                }
-                else
-                {
-                    currentExp.Responsibilities += (string.IsNullOrEmpty(currentExp.Responsibilities) ? "" : " ") + trimmedLine;
-                }
+                currentExp.Responsibilities += (string.IsNullOrEmpty(currentExp.Responsibilities) ? "" : "\n") + trimmedLine;
             }
-            
             if (resume.WorkExperiences.Count >= 10) break;
         }
-        
         if (currentExp != null) resume.AddWorkExperience(currentExp);
     }
 
-
     private void ExtractEducation(Resume resume)
     {
-        var text = resume.RawText;
-        if (string.IsNullOrWhiteSpace(text)) return;
+        var sectionHeaders = new[] { "EDUCATION", "ACADEMIC", "QUALIFICATIONS", "STUDIES", "FORMATION", "PARCOURS ACADÉMIQUE", "DIPLÔMES" };
+        var eduText = ExtractSection(resume.RawText, sectionHeaders);
+        if (string.IsNullOrWhiteSpace(eduText)) return;
 
-        var sectionHeaders = new[] { "EDUCATION", "ACADEMIC", "QUALIFICATIONS", "STUDIES", "FORMATION", "PARCOURS ACADÉMIQUE" };
-        int startIndex = -1;
-        foreach (var header in sectionHeaders)
-        {
-            startIndex = text.IndexOf(header, StringComparison.OrdinalIgnoreCase);
-            if (startIndex != -1)
-            {
-                startIndex += header.Length;
-                break;
-            }
-        }
-
-        if (startIndex == -1) return;
-
-        int endIndex = text.Length;
-        var nextHeaders = new[] { "EXPERIENCE", "SKILLS", "PROJECTS", "CERTIFICATIONS", "LANGUAGES", "WORK EXPERIENCE", "EXPÉRIENCE" };
-        foreach (var header in nextHeaders)
-        {
-            int idx = text.IndexOf(header, startIndex + 5, StringComparison.OrdinalIgnoreCase);
-            if (idx != -1 && idx < endIndex) endIndex = idx;
-        }
-
-        var eduText = text.Substring(startIndex, endIndex - startIndex);
-        var lines = eduText.Trim().Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).ToList();
-
-        // Try to find multiple education entries
-        for (int i = 0; i < lines.Count; i++)
+        var lines = eduText.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+        for (int i = 0; i < lines.Length; i++)
         {
             var line = lines[i].Trim();
-            if (line.Length < 3 || line.Any(char.IsDigit) && line.Length < 10) continue;
-
-            var school = line;
-            var degree = (i + 1 < lines.Count) ? lines[i + 1].Trim() : "Degree/Certificate";
-            
-            resume.AddEducation(new Education
+            if (line.Length < 5) continue;
+            var degreeKeywords = new[] { "Cycle", "Diplôme", "Master", "Licence", "Bachelor", "Bac", "Doctorat", "Ingénieur", "Formation" };
+            if (degreeKeywords.Any(k => line.Contains(k, StringComparison.OrdinalIgnoreCase)))
             {
-                School = school,
-                Degree = degree
-            });
-            
-            i++; // skip next line as it was used for degree
+                var entry = new Education { Degree = line };
+                if (i + 1 < lines.Length)
+                {
+                    var nextLine = lines[i+1].Trim();
+                    if (nextLine.Length > 5 && !degreeKeywords.Any(k => nextLine.Contains(k, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        entry.School = nextLine;
+                        i++;
+                    }
+                }
+                resume.AddEducation(entry);
+            }
             if (resume.Education.Count >= 5) break;
         }
     }
 
     private void ExtractVolunteering(Resume resume)
     {
-        var text = resume.RawText;
         var sectionHeaders = new[] { "VOLUNTEERING", "LEADERSHIP", "COMMUNITY SERVICE", "BÉNÉVOLAT", "VIE ASSOCIATIVE" };
-        var sectionText = ExtractSection(text, sectionHeaders);
+        var sectionText = ExtractSection(resume.RawText, sectionHeaders);
         if (string.IsNullOrWhiteSpace(sectionText)) return;
 
         var lines = sectionText.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -532,9 +402,8 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
 
     private void ExtractLanguages(Resume resume)
     {
-        var text = resume.RawText;
         var sectionHeaders = new[] { "LANGUAGES", "LANGUES" };
-        var sectionText = ExtractSection(text, sectionHeaders);
+        var sectionText = ExtractSection(resume.RawText, sectionHeaders);
         if (string.IsNullOrWhiteSpace(sectionText)) return;
 
         var lines = sectionText.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -542,21 +411,16 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
         {
             var parts = line.Split(new[] { ':', '-', '|', '(' }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length >= 2)
-            {
                 resume.AddLanguage(new LanguageInfo { Language = parts[0].Trim(), Fluency = parts[1].Trim().Replace(")", "") });
-            }
             else if (line.Trim().Length > 2)
-            {
                 resume.AddLanguage(new LanguageInfo { Language = line.Trim(), Fluency = "Native/Fluent" });
-            }
         }
     }
 
     private void ExtractCertifications(Resume resume)
     {
-        var text = resume.RawText;
         var sectionHeaders = new[] { "CERTIFICATIONS", "CERTIFICATES", "LICENSES", "CERTIFICATIONS ET LICENCES" };
-        var sectionText = ExtractSection(text, sectionHeaders);
+        var sectionText = ExtractSection(resume.RawText, sectionHeaders);
         if (string.IsNullOrWhiteSpace(sectionText)) return;
 
         var lines = sectionText.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -569,9 +433,8 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
 
     private void ExtractProjects(Resume resume)
     {
-        var text = resume.RawText;
         var sectionHeaders = new[] { "PROJECTS", "PERSONAL PROJECTS", "ACADEMIC PROJECTS", "PROJETS", "REALISATIONS" };
-        var sectionText = ExtractSection(text, sectionHeaders);
+        var sectionText = ExtractSection(resume.RawText, sectionHeaders);
         if (string.IsNullOrWhiteSpace(sectionText)) return;
 
         var lines = sectionText.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -589,7 +452,7 @@ public class ResumeAnalyzerService : IResumeAnalyzerService
         else score += 20;
 
         if (!string.IsNullOrEmpty(resume.Email)) score += 5;
-        if (!string.IsNullOrEmpty(resume.CandidateName)) score += 5;
+        if (!string.IsNullOrEmpty(resume.CandidateName) && resume.CandidateName != "Candidate Name") score += 5;
         if (!string.IsNullOrEmpty(resume.Phone)) score += 5;
         if (!string.IsNullOrEmpty(resume.LinkedIn)) score += 5;
 
