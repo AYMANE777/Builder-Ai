@@ -1,8 +1,0 @@
-{
-  "projectId": "914cccae-5c61-47cd-92cc-667b7d7d09ac",
-  "createdAt": 1766149969929,
-  "startupCommands": [
-    "dotnet run --project src/Backend/AIResumeAnalyzer.Api/AIResumeAnalyzer.Api.csproj",
-    "cd src/Frontend/ai-resume-analyzer-ui; npm run dev"
-  ]
-}

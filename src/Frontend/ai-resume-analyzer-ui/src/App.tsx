@@ -118,7 +118,7 @@ const App: React.FC = () => {
             </div>
             <div className="flex flex-col">
               <span className="text-lg font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
-                Orchids AI
+                Job
               </span>
               <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-indigo-400/80">
                 Resume Intelligence
@@ -201,7 +201,7 @@ const App: React.FC = () => {
         <div className="mx-auto max-w-7xl px-6 flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center gap-2 opacity-50">
             <div className="h-5 w-5 rounded bg-slate-700" />
-            <span className="text-sm font-bold">Orchids AI</span>
+            <span className="text-sm font-bold">Job AI</span>
           </div>
           <p className="text-slate-500 text-sm italic">
             "Your resume is your story. Let AI help you tell it better."
